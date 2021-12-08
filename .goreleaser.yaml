@@ -8,7 +8,13 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - '-s -w'
+      - > 
+        -s -w
+        -X {{ .ModulePath }}/vars.ProjectName={{ .ProjectName }} 
+        -X {{ .ModulePath }}/vars.BuildVersion={{ .Version }} 
+        -X {{ .ModulePath }}/vars.BuildRevision={{ .ShortCommit }} 
+        -X {{ .ModulePath }}/vars.BuildDate={{ .Date }} 
+        -X {{ .ModulePath }}/vars.ProjectDocs={{ .GitURL }}
     goos:
       - freebsd
       - windows
@@ -35,7 +41,7 @@ builds:
         goarch: arm
       - goos: windows
         goarch: arm
-    binary: '{{ .ProjectName }}_{{ .Version }}'
+    binary: '{{ .ProjectName }}'
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
