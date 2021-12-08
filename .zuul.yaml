@@ -1,0 +1,20 @@
+---
+- project:
+    merge-mode: squash-merge
+    vars:
+      functest_project_name: "eu-de_zuul_go"
+    default-branch: main
+    check:
+      jobs:
+        - otc-golangci-lint
+        - golang-make-vet
+        - golang-make-test
+        - goreleaser-build:
+            nodeset: fedora-32-large
+    gate:
+      jobs:
+        - otc-golangci-lint
+        - golang-make-vet
+        - golang-make-test
+        - goreleaser-build:
+            nodeset: fedora-32-large
