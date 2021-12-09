@@ -18,3 +18,7 @@
         - golang-make-test
         - goreleaser-build:
             nodeset: fedora-32-large
+    tag:
+      jobs:
+        - release-goreleaser:
+            nodeset: fedora-32-large
