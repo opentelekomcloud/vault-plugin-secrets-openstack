@@ -2,44 +2,59 @@ package openstack
 
 import (
 	"context"
+	"sync"
 
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
 )
 
 const backendHelp = "OpenStack Token Backend"
 
-func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-	backend := &framework.Backend{
+type backend struct {
+	*framework.Backend
+
+	client     *gophercloud.ProviderClient
+	clientOpts *clientconfig.ClientOpts
+
+	lock sync.Mutex
+}
+
+func Factory(_ context.Context, cfg *logical.BackendConfig) (logical.Backend, error) {
+	b := new(backend)
+	b.Backend = &framework.Backend{
 		Help: backendHelp,
+		PathsSpecial: &logical.Paths{
+			Unauthenticated: []string{
+				infoPattern,
+			},
+			SealWrapStorage: []string{
+				pathConfig,
+			},
+		},
 		Paths: []*framework.Path{
 			pathInfo,
+			b.pathConfig(),
 		},
 		Secrets:     nil,
 		BackendType: logical.TypeLogical,
+		Invalidate:  b.invalidate,
 	}
-	return backend, nil
+	return b, nil
 }
 
-var pathInfo = &framework.Path{
-	Pattern:      "info",
-	HelpSynopsis: "Get general plugin info",
-	Operations: map[logical.Operation]framework.OperationHandler{
-		logical.ReadOperation: &framework.PathOperation{
-			Callback: pathInfoRead,
-		},
-	},
+func (b *backend) reset() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.client = nil
+	b.clientOpts = nil
 }
 
-func pathInfoRead(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"project_name":   vars.ProjectName,
-			"project_docs":   vars.ProjectDocs,
-			"build_version":  vars.BuildVersion,
-			"build_revision": vars.BuildRevision,
-			"build_date":     vars.BuildDate,
-		},
-	}, nil
+func (b *backend) invalidate(_ context.Context, key string) {
+	switch key {
+	case "config":
+		b.reset()
+	}
 }
