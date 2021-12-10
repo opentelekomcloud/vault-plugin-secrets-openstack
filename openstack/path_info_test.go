@@ -11,6 +11,7 @@ import (
 )
 
 func TestInfoRead(t *testing.T) {
+	t.Parallel()
 	b, storage := testBackend(t)
 
 	vars.ProjectName = tools.RandomString("proj-", 5)

@@ -14,7 +14,10 @@ vet:
 	go vet ./...
 
 test: vet
-	go test -v ./...
+	go test -covermode atomic -coverprofile coverage.out ./...
+
+cov-report:
+	go tool cover -html coverage.out -o coverage.html
 
 fmt:
 	@gofmt -w $(GOFMT_FILES)

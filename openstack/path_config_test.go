@@ -104,7 +104,10 @@ func TestPathConfig_write(t *testing.T) {
 	}
 
 	for name, c := range cases {
+		c := c
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			b, storage := testBackend(t)
 			if c.initial != nil {
 				require.NoError(t, b.setConfig(context.Background(), c.initial, storage))
@@ -146,7 +149,9 @@ func TestPathConfig_errStorage(t *testing.T) {
 	}
 
 	for _, v := range cases {
+		v := v
 		t.Run(string(v.operation), func(t *testing.T) {
+			t.Parallel()
 			b, storage := testBackend(t, v.verb)
 
 			_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -161,6 +166,7 @@ func TestPathConfig_errStorage(t *testing.T) {
 }
 
 func TestPathConfig_delete(t *testing.T) {
+	t.Parallel()
 	b, storage := testBackend(t)
 	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Storage:   storage,
@@ -173,7 +179,9 @@ func TestPathConfig_delete(t *testing.T) {
 func TestPathConfig_checkExists(t *testing.T) {
 	for _, expected := range []bool{true, false} {
 		name := fmt.Sprintf("exists/%v", expected)
+		expected := expected
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			b, storage := testBackend(t)
 			if expected {
 				require.NoError(t, b.setConfig(context.Background(), randomConfig(), storage))
