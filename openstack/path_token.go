@@ -2,6 +2,8 @@ package openstack
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -15,6 +17,11 @@ const (
 	pathToken = "token"
 
 	tokenHelpSyn = `Create and return tokens a token using OpenStack secrets plugin.`
+)
+
+var (
+	errUnableToCreateToken  = errors.New("unable to create token")
+	errUnableToCreateClient = errors.New("unable to create OpenStack Identity client")
 )
 
 func (b *backend) pathToken() *framework.Path {
@@ -46,7 +53,7 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, d *fram
 
 	client, err := IdentityV3Client(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", errUnableToCreateClient, err)
 	}
 
 	tokensOpts := &tokens.AuthOptions{
@@ -60,22 +67,24 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, d *fram
 		tokensOpts.Passcode = passcode.(string)
 	}
 
-	tok, err := tokens.Create(client, tokensOpts).ExtractToken()
+	token, err := tokens.Create(client, tokensOpts).ExtractToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", errUnableToCreateToken, err)
 	}
 
 	resData := &logical.Response{
 		Data: map[string]interface{}{
-			"token":      tok.ID,
-			"expires_at": tok.ExpiresAt,
+			"token":      token.ID,
+			"expires_at": token.ExpiresAt,
 		},
 	}
 
 	resData.Secret = &logical.Secret{
-		InternalData: map[string]interface{}{"secret_type": backendSecretType},
+		InternalData: map[string]interface{}{
+			"secret_type": backendSecretType,
+		},
 		LeaseOptions: logical.LeaseOptions{
-			TTL: time.Until(tok.ExpiresAt),
+			TTL: time.Until(token.ExpiresAt),
 		},
 	}
 
@@ -90,12 +99,12 @@ func IdentityV3Client(config *osConfig) (*gophercloud.ServiceClient, error) {
 		DomainName:       config.DomainName,
 	}
 
-	pc, err := openstack.AuthenticatedClient(options)
+	providerClient, err := openstack.AuthenticatedClient(options)
 	if err != nil {
 		return nil, err
 	}
 
-	return openstack.NewIdentityV3(pc, gophercloud.EndpointOpts{
+	return openstack.NewIdentityV3(providerClient, gophercloud.EndpointOpts{
 		Region: config.Region,
 	})
 }

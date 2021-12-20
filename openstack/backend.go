@@ -23,7 +23,7 @@ type backend struct {
 	lock sync.Mutex
 }
 
-func Factory(_ context.Context, cfg *logical.BackendConfig) (logical.Backend, error) {
+func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
 	b := new(backend)
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -38,6 +38,7 @@ func Factory(_ context.Context, cfg *logical.BackendConfig) (logical.Backend, er
 		Paths: []*framework.Path{
 			pathInfo,
 			b.pathConfig(),
+			b.pathToken(),
 		},
 		Secrets:     nil,
 		BackendType: logical.TypeLogical,
