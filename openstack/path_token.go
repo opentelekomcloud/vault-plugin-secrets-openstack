@@ -40,6 +40,10 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, d *fram
 		return nil, err
 	}
 
+	if config == nil {
+		return &logical.Response{}, errEmptyConfig
+	}
+
 	client, err := IdentityV3Client(config)
 	if err != nil {
 		return nil, err

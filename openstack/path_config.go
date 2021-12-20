@@ -20,6 +20,7 @@ var (
 	errReadingConfig     = errors.New("error reading OpenStack configuration")
 	errWritingConfig     = errors.New("error storing OpenStack configuration")
 	errDeleteConfig      = errors.New("error deleting OpenStack configuration")
+	errEmptyConfig       = errors.New("config is empty")
 )
 
 type osConfig struct {
