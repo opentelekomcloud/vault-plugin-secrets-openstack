@@ -12,6 +12,8 @@ import (
 
 const backendHelp = "OpenStack Token Backend"
 
+const backendSecretType = "openstack_token"
+
 type backend struct {
 	*framework.Backend
 
