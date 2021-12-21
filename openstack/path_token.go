@@ -20,9 +20,21 @@ const (
 )
 
 var (
-	errUnableToCreateToken  = errors.New("unable to create token")
-	errUnableToCreateClient = errors.New("unable to create OpenStack Identity client")
+	errUnableToCreateToken = errors.New("unable to create token")
 )
+
+func secretToken(_ *backend) *framework.Secret {
+	return &framework.Secret{
+		Type: backendSecretType,
+		Fields: map[string]*framework.FieldSchema{
+			"token": {
+				Type:        framework.TypeString,
+				Description: "OpenStack token.",
+			},
+		},
+	}
+
+}
 
 func (b *backend) pathToken() *framework.Path {
 	return &framework.Path{
@@ -37,25 +49,21 @@ func (b *backend) pathToken() *framework.Path {
 }
 
 func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	config, err := b.getConfig(ctx, r.Storage)
+	provider, err := b.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if config == nil {
-		return &logical.Response{}, errEmptyConfig
-	}
-
-	client, err := IdentityV3Client(config)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", errUnableToCreateClient, err)
-	}
+	client, err := openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{
+		Region: b.clientOpts.RegionName,
+	})
 
 	tokensOpts := &tokens.AuthOptions{
-		IdentityEndpoint: config.AuthURL,
-		Username:         config.Username,
-		Password:         config.Password,
-		DomainName:       config.DomainName,
+		IdentityEndpoint: b.clientOpts.AuthInfo.AuthURL,
+		Username:         b.clientOpts.AuthInfo.Username,
+		Password:         b.clientOpts.AuthInfo.Password,
+		DomainName:       b.clientOpts.AuthInfo.DomainName,
+		AllowReauth:      true,
 	}
 
 	token, err := tokens.Create(client, tokensOpts).ExtractToken()
@@ -80,22 +88,4 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	}
 
 	return resData, nil
-}
-
-func IdentityV3Client(config *osConfig) (*gophercloud.ServiceClient, error) {
-	options := gophercloud.AuthOptions{
-		IdentityEndpoint: config.AuthURL,
-		Username:         config.Username,
-		Password:         config.Password,
-		DomainName:       config.DomainName,
-	}
-
-	providerClient, err := openstack.AuthenticatedClient(options)
-	if err != nil {
-		return nil, err
-	}
-
-	return openstack.NewIdentityV3(providerClient, gophercloud.EndpointOpts{
-		Region: config.Region,
-	})
 }
