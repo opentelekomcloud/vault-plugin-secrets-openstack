@@ -42,7 +42,9 @@ func TestTokenPath_read(t *testing.T) {
 			Storage:   storage,
 			Operation: logical.CreateOperation,
 			Path:      pathConfig,
-			Data:      randomConfigData(),
+			Data: map[string]interface{}{
+				"auth_url": ts.URL,
+			},
 		})
 		assert.NoError(t, err)
 
