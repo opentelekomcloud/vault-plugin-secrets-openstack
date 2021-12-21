@@ -27,11 +27,6 @@ var (
 func (b *backend) pathToken() *framework.Path {
 	return &framework.Path{
 		Pattern: pathToken,
-		Fields: map[string]*framework.FieldSchema{
-			"passcode": {
-				Type: framework.TypeString,
-			},
-		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathTokenRead,
@@ -41,7 +36,7 @@ func (b *backend) pathToken() *framework.Path {
 	}
 }
 
-func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := b.getConfig(ctx, r.Storage)
 	if err != nil {
 		return nil, err
@@ -61,10 +56,6 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, d *fram
 		Username:         config.Username,
 		Password:         config.Password,
 		DomainName:       config.DomainName,
-	}
-
-	if passcode, ok := d.GetOk("passcode"); ok {
-		tokensOpts.Passcode = passcode.(string)
 	}
 
 	token, err := tokens.Create(client, tokensOpts).ExtractToken()

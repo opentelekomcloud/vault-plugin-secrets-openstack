@@ -40,7 +40,17 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			b.pathConfig(),
 			b.pathToken(),
 		},
-		Secrets:     nil,
+		Secrets: []*framework.Secret{
+			{
+				Type: backendSecretType,
+				Fields: map[string]*framework.FieldSchema{
+					"token": {
+						Type:        framework.TypeString,
+						Description: "OpenStack token.",
+					},
+				},
+			},
+		},
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
 	}
