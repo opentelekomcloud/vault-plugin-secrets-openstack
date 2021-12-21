@@ -68,17 +68,10 @@ func (b *backend) invalidate(_ context.Context, key string) {
 
 func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gophercloud.ProviderClient, error) {
 	b.lock.Lock()
-
-	if b.client != nil {
-		b.lock.Unlock()
-		return b.client, nil
-	}
-
-	b.lock.Unlock()
-	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.client != nil {
+		b.lock.Unlock()
 		return b.client, nil
 	}
 
@@ -92,12 +85,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 			config = new(osConfig)
 		}
 
-		clientOpts := b.getClientOpts(config)
-		b.clientOpts = clientOpts
-	}
-
-	if config == nil {
-		return nil, errEmptyConfig
+		b.clientOpts = b.getClientOpts(config)
 	}
 
 	ao, err := clientconfig.AuthOptions(b.clientOpts)
@@ -125,22 +113,28 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 }
 
 func (b *backend) getClientOpts(config *osConfig) *clientconfig.ClientOpts {
-	firstAvailable := func(opts ...string) string {
-		for _, s := range opts {
-			if s != "" {
-				return s
-			}
-		}
-		return ""
+	clientOpts := &clientconfig.ClientOpts{
+		Cloud: os.Getenv("OS_CLOUD"),
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:           firstAvailable(os.Getenv("OS_AUTH_URL"), config.AuthURL),
+			Username:          firstAvailable(os.Getenv("OS_USERNAME"), config.Username),
+			Password:          firstAvailable(os.Getenv("OS_PASSWORD"), config.Password),
+			ProjectName:       firstAvailable(os.Getenv("OS_PROJECT_NAME"), config.ProjectName),
+			UserDomainName:    os.Getenv("OS_USER_DOMAIN_NAME"),
+			ProjectDomainName: os.Getenv("OS_PROJECT_DOMAIN_NAME"),
+			DomainName:        firstAvailable(os.Getenv("OS_DOMAIN_NAME"), config.DomainName),
+		},
+		RegionName: firstAvailable(os.Getenv("OS_REGION_NAME"), config.Region),
 	}
 
-	clientOpts := new(clientconfig.ClientOpts)
-	clientOpts.AuthInfo.AuthURL = firstAvailable(os.Getenv("OS_AUTH_URL"), config.AuthURL)
-	clientOpts.AuthInfo.Password = firstAvailable(os.Getenv("OS_PASSWORD"), config.Password)
-	clientOpts.AuthInfo.DomainName = firstAvailable(os.Getenv("OS_DOMAIN_NAME"), config.DomainName)
-	clientOpts.AuthInfo.ProjectName = firstAvailable(os.Getenv("OS_PROJECT_NAME"), config.ProjectName)
-	clientOpts.AuthInfo.Username = firstAvailable(os.Getenv("OS_USERNAME"), config.Username)
-	clientOpts.RegionName = firstAvailable(os.Getenv("OS_REGION_NAME"), config.Region)
-
 	return clientOpts
+}
+
+func firstAvailable(opts ...string) string {
+	for _, s := range opts {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
 }
