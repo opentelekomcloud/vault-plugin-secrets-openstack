@@ -92,7 +92,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 			config = new(osConfig)
 		}
 
-		clientOpts := b.genClientOpts(config)
+		clientOpts := b.getClientOpts(config)
 		b.clientOpts = clientOpts
 	}
 
@@ -124,7 +124,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	return client, nil
 }
 
-func (b *backend) genClientOpts(config *osConfig) *clientconfig.ClientOpts {
+func (b *backend) getClientOpts(config *osConfig) *clientconfig.ClientOpts {
 	firstAvailable := func(opts ...string) string {
 		for _, s := range opts {
 			if s != "" {
