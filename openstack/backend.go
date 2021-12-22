@@ -2,7 +2,6 @@ package openstack
 
 import (
 	"context"
-	"os"
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
@@ -75,31 +74,12 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 		return b.client, nil
 	}
 
-	config, err := b.getConfig(ctx, s)
+	ao, err := clientconfig.AuthOptions(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.clientOpts == nil {
-		if config == nil {
-			config = new(osConfig)
-		}
-
-		b.clientOpts = b.getClientOpts(config)
-	}
-
-	ao, err := clientconfig.AuthOptions(b.clientOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	provider, err := openstack.NewClient(ao.IdentityEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	err = openstack.Authenticate(provider, *ao)
-	if err != nil {
+	if err = b.setClientOpts(ctx, s, ao); err != nil {
 		return nil, err
 	}
 
@@ -112,22 +92,30 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	return client, nil
 }
 
-func (b *backend) getClientOpts(config *osConfig) *clientconfig.ClientOpts {
-	clientOpts := &clientconfig.ClientOpts{
-		Cloud: os.Getenv("OS_CLOUD"),
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:           firstAvailable(os.Getenv("OS_AUTH_URL"), config.AuthURL),
-			Username:          firstAvailable(os.Getenv("OS_USERNAME"), config.Username),
-			Password:          firstAvailable(os.Getenv("OS_PASSWORD"), config.Password),
-			ProjectName:       firstAvailable(os.Getenv("OS_PROJECT_NAME"), config.ProjectName),
-			UserDomainName:    os.Getenv("OS_USER_DOMAIN_NAME"),
-			ProjectDomainName: os.Getenv("OS_PROJECT_DOMAIN_NAME"),
-			DomainName:        firstAvailable(os.Getenv("OS_DOMAIN_NAME"), config.DomainName),
-		},
-		RegionName: firstAvailable(os.Getenv("OS_REGION_NAME"), config.Region),
+func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *gophercloud.AuthOptions) error {
+	config, err := b.getConfig(ctx, s)
+	if err != nil {
+		return err
 	}
 
-	return clientOpts
+	if config == nil {
+		config = new(osConfig)
+	}
+
+	clientOpts := &clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:     firstAvailable(config.AuthURL, ao.IdentityEndpoint),
+			Username:    firstAvailable(config.AuthURL, ao.Username),
+			Password:    firstAvailable(config.AuthURL, ao.Password),
+			ProjectName: firstAvailable(config.AuthURL, ao.TenantName),
+			DomainName:  firstAvailable(config.AuthURL, ao.DomainName),
+		},
+		RegionName: config.Region,
+	}
+
+	b.clientOpts = clientOpts
+
+	return nil
 }
 
 func firstAvailable(opts ...string) string {

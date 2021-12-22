@@ -21,9 +21,12 @@ const (
 
 var (
 	errUnableToCreateToken = errors.New("unable to create token")
+	errUnableToRevokeToken = errors.New("unable to revoke token")
+
+	errUnableToCreateClient = errors.New("unable to create IdentityV3 client")
 )
 
-func secretToken(_ *backend) *framework.Secret {
+func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: backendSecretType,
 		Fields: map[string]*framework.FieldSchema{
@@ -32,6 +35,7 @@ func secretToken(_ *backend) *framework.Secret {
 				Description: "OpenStack token.",
 			},
 		},
+		Revoke: b.tokenRevoke,
 	}
 
 }
@@ -57,13 +61,15 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	client, err := openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{
 		Region: b.clientOpts.RegionName,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errUnableToCreateClient, err)
+	}
 
 	tokensOpts := &tokens.AuthOptions{
 		IdentityEndpoint: b.clientOpts.AuthInfo.AuthURL,
 		Username:         b.clientOpts.AuthInfo.Username,
 		Password:         b.clientOpts.AuthInfo.Password,
 		DomainName:       b.clientOpts.AuthInfo.DomainName,
-		AllowReauth:      true,
 	}
 
 	token, err := tokens.Create(client, tokensOpts).ExtractToken()
@@ -88,4 +94,31 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	}
 
 	return resData, nil
+}
+
+func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	tokenRaw, ok := r.Secret.InternalData["token"]
+	if !ok {
+		return nil, errors.New("internal data 'token' not found")
+	}
+
+	token := tokenRaw.(string)
+
+	provider, err := b.getClient(ctx, r.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{
+		Region: b.clientOpts.RegionName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errUnableToCreateClient, err)
+	}
+
+	if err := tokens.Revoke(client, token).Err; err != nil {
+		return nil, fmt.Errorf("%w: %v", errUnableToRevokeToken, err)
+	}
+
+	return &logical.Response{}, nil
 }
