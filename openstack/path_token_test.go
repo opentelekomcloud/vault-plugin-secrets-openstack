@@ -21,7 +21,6 @@ var (
 
 func TestTokenPath_read(t *testing.T) {
 	t.Run("HappyPath", func(t *testing.T) {
-		t.Parallel()
 		b, storage := testBackend(t)
 
 		ts := httptest.NewServer(http.HandlerFunc(
@@ -43,7 +42,7 @@ func TestTokenPath_read(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Path:      pathConfig,
 			Data: map[string]interface{}{
-				"auth_url": ts.URL,
+				"auth_url": ts.URL + "/v3",
 			},
 		})
 		assert.NoError(t, err)
@@ -52,9 +51,11 @@ func TestTokenPath_read(t *testing.T) {
 			Storage:   storage,
 			Operation: logical.ReadOperation,
 			Path:      pathToken,
+			Data:      map[string]interface{}{},
 		})
 		assert.NoError(t, err)
 
+		assert.NotNil(t, r)
 		assert.Equal(t, r.Data["expires_at"].(string), testTokenExp)
 		assert.Equal(t, r.Data["token"].(string), testToken)
 	})

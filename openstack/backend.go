@@ -74,7 +74,12 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 		return b.client, nil
 	}
 
-	ao, err := clientconfig.AuthOptions(nil)
+	configOpts, err := b.getClientOpts(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	ao, err := clientconfig.AuthOptions(configOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +97,30 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	return client, nil
 }
 
+func (b *backend) getClientOpts(ctx context.Context, s logical.Storage) (*clientconfig.ClientOpts, error) {
+	config, err := b.getConfig(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		config = new(osConfig)
+	}
+
+	clientOpts := &clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:     config.AuthURL,
+			Username:    config.Username,
+			Password:    config.Password,
+			ProjectName: config.ProjectName,
+			DomainName:  config.DomainName,
+		},
+		RegionName: config.Region,
+	}
+
+	return clientOpts, nil
+}
+
 func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *gophercloud.AuthOptions) error {
 	config, err := b.getConfig(ctx, s)
 	if err != nil {
@@ -105,10 +134,10 @@ func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *goph
 	clientOpts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
 			AuthURL:     firstAvailable(config.AuthURL, ao.IdentityEndpoint),
-			Username:    firstAvailable(config.AuthURL, ao.Username),
-			Password:    firstAvailable(config.AuthURL, ao.Password),
-			ProjectName: firstAvailable(config.AuthURL, ao.TenantName),
-			DomainName:  firstAvailable(config.AuthURL, ao.DomainName),
+			Username:    firstAvailable(config.Username, ao.Username),
+			Password:    firstAvailable(config.Password, ao.Password),
+			ProjectName: firstAvailable(config.ProjectName, ao.TenantName),
+			DomainName:  firstAvailable(config.DomainName, ao.DomainName),
 		},
 		RegionName: config.Region,
 	}
