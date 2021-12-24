@@ -28,22 +28,42 @@ func TestTokenPath_read(t *testing.T) {
 				t.Helper()
 
 				body, _ := json.Marshal(map[string]interface{}{
-					"token":      testToken,
-					"expires_at": testTokenExp,
+					"token": map[string]interface{}{
+						"expires_at": testTokenExp,
+						"catalog": []map[string]interface{}{
+							{
+								"endpoints": []map[string]interface{}{
+									{
+										"id":        "6872ffd84d4a84c29967739ae3fd",
+										"interface": "public",
+										"region":    "eu-de",
+										"region_id": "eu-de",
+										"url":       "https://example.com/v3",
+									},
+								},
+								"id":   "45a4010411237f79b727c52b",
+								"name": "keystone",
+								"type": "identity",
+							},
+						},
+					},
 				})
+				w.Header().Set("X-Subject-Token", testToken)
 				w.WriteHeader(http.StatusCreated)
 				w.Write(body)
 			}),
 		)
 		defer ts.Close()
 
+		configData := randomConfigData()
+		configData["auth_url"] = ts.URL + "/v3"
+		configData["region"] = "eu-de"
+
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   storage,
 			Operation: logical.CreateOperation,
 			Path:      pathConfig,
-			Data: map[string]interface{}{
-				"auth_url": ts.URL + "/v3",
-			},
+			Data:      configData,
 		})
 		assert.NoError(t, err)
 
@@ -51,7 +71,6 @@ func TestTokenPath_read(t *testing.T) {
 			Storage:   storage,
 			Operation: logical.ReadOperation,
 			Path:      pathToken,
-			Data:      map[string]interface{}{},
 		})
 		assert.NoError(t, err)
 

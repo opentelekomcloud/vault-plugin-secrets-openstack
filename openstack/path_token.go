@@ -66,10 +66,9 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	}
 
 	tokensOpts := &tokens.AuthOptions{
-		IdentityEndpoint: b.clientOpts.AuthInfo.AuthURL,
-		Username:         b.clientOpts.AuthInfo.Username,
-		Password:         b.clientOpts.AuthInfo.Password,
-		DomainName:       b.clientOpts.AuthInfo.DomainName,
+		Username:   b.clientOpts.AuthInfo.Username,
+		Password:   b.clientOpts.AuthInfo.Password,
+		DomainName: b.clientOpts.AuthInfo.DomainName,
 	}
 
 	token, err := tokens.Create(client, tokensOpts).ExtractToken()
