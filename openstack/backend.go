@@ -74,12 +74,12 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 		return b.client, nil
 	}
 
-	configOpts, err := b.getClientOpts(ctx, s)
+	clientOpts, err := b.clientOptsFromConfig(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	ao, err := clientconfig.AuthOptions(configOpts)
+	ao, err := clientconfig.AuthOptions(clientOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	return client, nil
 }
 
-func (b *backend) getClientOpts(ctx context.Context, s logical.Storage) (*clientconfig.ClientOpts, error) {
+func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) (*clientconfig.ClientOpts, error) {
 	config, err := b.getConfig(ctx, s)
 	if err != nil {
 		return nil, err

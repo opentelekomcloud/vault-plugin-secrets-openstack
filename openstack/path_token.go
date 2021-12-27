@@ -69,6 +69,10 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 		Username:   b.clientOpts.AuthInfo.Username,
 		Password:   b.clientOpts.AuthInfo.Password,
 		DomainName: b.clientOpts.AuthInfo.DomainName,
+		Scope: tokens.Scope{
+			DomainName:  b.clientOpts.AuthInfo.DomainName,
+			ProjectName: b.clientOpts.AuthInfo.ProjectName,
+		},
 	}
 
 	token, err := tokens.Create(client, tokensOpts).ExtractToken()
@@ -79,7 +83,7 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	resData := &logical.Response{
 		Data: map[string]interface{}{
 			"token":      token.ID,
-			"expires_at": token.ExpiresAt,
+			"expires_at": token.ExpiresAt.String(),
 		},
 	}
 
