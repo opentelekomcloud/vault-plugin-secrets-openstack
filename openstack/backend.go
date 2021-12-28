@@ -90,18 +90,13 @@ func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) e
 		config = new(osConfig)
 	}
 
-	ao, err := clientconfig.AuthOptions(nil)
-	if err != nil {
-		return err
-	}
-
 	clientOpts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     firstAvailable(config.AuthURL, ao.IdentityEndpoint),
-			Username:    firstAvailable(config.Username, ao.Username),
-			Password:    firstAvailable(config.Password, ao.Password),
-			ProjectName: firstAvailable(config.ProjectName, ao.TenantName),
-			DomainName:  firstAvailable(config.DomainName, ao.DomainName),
+			AuthURL:     config.AuthURL,
+			Username:    config.Username,
+			Password:    config.Password,
+			ProjectName: config.ProjectName,
+			DomainName:  config.DomainName,
 		},
 		RegionName: config.Region,
 	}
@@ -115,13 +110,4 @@ func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) e
 	b.client = client
 
 	return nil
-}
-
-func firstAvailable(opts ...string) string {
-	for _, s := range opts {
-		if s != "" {
-			return s
-		}
-	}
-	return ""
 }

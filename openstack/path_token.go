@@ -68,9 +68,9 @@ func (b *backend) pathTokenRead(ctx context.Context, r *logical.Request, _ *fram
 	tokensOpts := &tokens.AuthOptions{
 		Username:   b.clientOpts.AuthInfo.Username,
 		Password:   b.clientOpts.AuthInfo.Password,
-		DomainName: b.clientOpts.AuthInfo.DomainName,
+		DomainName: b.clientOpts.AuthInfo.UserDomainName,
 		Scope: tokens.Scope{
-			DomainName:  b.clientOpts.AuthInfo.DomainName,
+			DomainName:  b.clientOpts.AuthInfo.UserDomainName,
 			ProjectName: b.clientOpts.AuthInfo.ProjectName,
 		},
 	}
