@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -70,58 +69,18 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	defer b.lock.Unlock()
 
 	if b.client != nil {
-		b.lock.Unlock()
 		return b.client, nil
 	}
 
-	clientOpts, err := b.clientOptsFromConfig(ctx, s)
+	err := b.clientOptsFromConfig(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	ao, err := clientconfig.AuthOptions(clientOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = b.setClientOpts(ctx, s, ao); err != nil {
-		return nil, err
-	}
-
-	client, err := openstack.AuthenticatedClient(*ao)
-	if err != nil {
-		return nil, err
-	}
-	b.client = client
-
-	return client, nil
+	return b.client, nil
 }
 
-func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) (*clientconfig.ClientOpts, error) {
-	config, err := b.getConfig(ctx, s)
-	if err != nil {
-		return nil, err
-	}
-
-	if config == nil {
-		config = new(osConfig)
-	}
-
-	clientOpts := &clientconfig.ClientOpts{
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     config.AuthURL,
-			Username:    config.Username,
-			Password:    config.Password,
-			ProjectName: config.ProjectName,
-			DomainName:  config.DomainName,
-		},
-		RegionName: config.Region,
-	}
-
-	return clientOpts, nil
-}
-
-func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *gophercloud.AuthOptions) error {
+func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) error {
 	config, err := b.getConfig(ctx, s)
 	if err != nil {
 		return err
@@ -129,6 +88,11 @@ func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *goph
 
 	if config == nil {
 		config = new(osConfig)
+	}
+
+	ao, err := clientconfig.AuthOptions(nil)
+	if err != nil {
+		return err
 	}
 
 	clientOpts := &clientconfig.ClientOpts{
@@ -143,6 +107,12 @@ func (b *backend) setClientOpts(ctx context.Context, s logical.Storage, ao *goph
 	}
 
 	b.clientOpts = clientOpts
+
+	client, err := clientconfig.AuthenticatedClient(clientOpts)
+	if err != nil {
+		return err
+	}
+	b.client = client
 
 	return nil
 }
