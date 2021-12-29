@@ -63,7 +63,7 @@ func TestTokenPath_read(t *testing.T) {
 			th.TestJSONRequest(t, r, authFixture)
 
 			w.WriteHeader(http.StatusCreated)
-			_, _ = fmt.Fprintf(w, tokenFixture)
+			_, _ = fmt.Fprint(w, tokenFixture)
 		})
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
