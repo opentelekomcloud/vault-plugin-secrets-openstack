@@ -12,6 +12,8 @@ import (
 
 const backendHelp = "OpenStack Token Backend"
 
+const backendSecretType = "openstack_token"
+
 type backend struct {
 	*framework.Backend
 
@@ -21,7 +23,7 @@ type backend struct {
 	lock sync.Mutex
 }
 
-func Factory(_ context.Context, cfg *logical.BackendConfig) (logical.Backend, error) {
+func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
 	b := new(backend)
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -36,8 +38,11 @@ func Factory(_ context.Context, cfg *logical.BackendConfig) (logical.Backend, er
 		Paths: []*framework.Path{
 			pathInfo,
 			b.pathConfig(),
+			b.pathToken(),
 		},
-		Secrets:     nil,
+		Secrets: []*framework.Secret{
+			secretToken(b),
+		},
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
 	}
@@ -57,4 +62,52 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case "config":
 		b.reset()
 	}
+}
+
+func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gophercloud.ProviderClient, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.client != nil {
+		return b.client, nil
+	}
+
+	err := b.initClient(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.client, nil
+}
+
+func (b *backend) initClient(ctx context.Context, s logical.Storage) error {
+	config, err := b.getConfig(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	if config == nil {
+		config = new(osConfig)
+	}
+
+	clientOpts := &clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:     config.AuthURL,
+			Username:    config.Username,
+			Password:    config.Password,
+			ProjectName: config.ProjectName,
+			DomainName:  config.DomainName,
+		},
+		RegionName: config.Region,
+	}
+
+	b.clientOpts = clientOpts
+
+	client, err := clientconfig.AuthenticatedClient(clientOpts)
+	if err != nil {
+		return err
+	}
+	b.client = client
+
+	return nil
 }
