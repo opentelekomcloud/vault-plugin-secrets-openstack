@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	authFixture = `{
+	tokenRequest = `{
   "auth": {
     "identity": {
       "methods": [
@@ -41,7 +41,7 @@ const (
 }
 `
 
-	tokenFixture = `{
+	tokenResponse = `{
   "token": {
     "expires_at": "2014-10-02T13:45:00.000000Z"
   }
@@ -60,10 +60,10 @@ func TestTokenPath_read(t *testing.T) {
 			th.TestMethod(t, r, "POST")
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
-			th.TestJSONRequest(t, r, authFixture)
+			th.TestJSONRequest(t, r, tokenRequest)
 
 			w.WriteHeader(http.StatusCreated)
-			_, _ = fmt.Fprint(w, tokenFixture)
+			_, _ = fmt.Fprint(w, tokenResponse)
 		})
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{

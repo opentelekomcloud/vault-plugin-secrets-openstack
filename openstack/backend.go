@@ -72,7 +72,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 		return b.client, nil
 	}
 
-	err := b.clientOptsFromConfig(ctx, s)
+	err := b.initClient(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gopherclou
 	return b.client, nil
 }
 
-func (b *backend) clientOptsFromConfig(ctx context.Context, s logical.Storage) error {
+func (b *backend) initClient(ctx context.Context, s logical.Storage) error {
 	config, err := b.getConfig(ctx, s)
 	if err != nil {
 		return err
