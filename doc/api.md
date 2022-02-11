@@ -19,22 +19,20 @@ will overwrite them.
 
 * `auth_url` `(string: <required>)` - URL of identity service authentication endpoint.
 
-* `domain_name` `(string: <required>)` - Name of the domain of the root user.
+* `user_domain_name` `(string: <required>)` - Name of the domain of the root user.
 
 * `username` `(string: <required>)` - OpenStack username of the root user
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `project_name` `(string: <optional>)` - Name of the OpenStack project the root user is used with.
-
 ### Sample Payload
 
 ```json
 {
-  "auth_url": "http://10.172.80.148:5000/v3/",
+  "auth_url": "https://example.com/v3/",
   "username": "admin",
   "password": "RcigTiYrJjVmEkrV71Cd",
-  "domain_name": "Default"
+  "user_domain_name": "Default"
 }
 ```
 
@@ -48,10 +46,10 @@ $ curl \
     http://127.0.0.1:8200/v1/openstack/config/example-cloud
 ```
 
-## Read Root Credentials
+## Read Root Configuration
 
-This endpoint allows you to get existing root configuration. Note that it won't contain username, domain name or project
-name, but only a generated token.
+This endpoint allows you to read non-secure values that have been configured in the `config/:cloud` endpoint.
+In particular, the `password` parameter is never returned.
 
 | Method | Path                     |
 |:-------|:-------------------------|
@@ -69,10 +67,9 @@ $ curl \
 
 ```json
 {
-  "data": {
-    "auth_url": "http://10.172.80.148:5000/v3/",
-    "token": "gAAAAABiA5N8qjR0UICb5S7-2lW-h-JRAzXKR2aRpliBHfb..."
-  }
+  "auth_url": "https://example.com/v3/",
+  "username": "admin",
+  "user_domain_name": "Default"
 }
 ```
 
@@ -83,9 +80,9 @@ it used. Password change will be performed and new token will be returned.
 
 Once this method is called, Vault will now be the only entity that knows the password used to access OpenStack instance.
 
-| Method | Path                            |
-|:-------|:--------------------------------|
-| GET    | /openstack/config-rotate/:cloud |
+| Method | Path                           |
+|:-------|:-------------------------------|
+| GET    | /openstack/rotate-root/:cloud  |
 
 ### Sample Request
 
@@ -93,81 +90,7 @@ Once this method is called, Vault will now be the only entity that knows the pas
 $ curl \
   --header "X-Vault-Token: ..." \
   --request POST \
-  http://127.0.0.1:8200/v1/openstack/config-rotate/:cloud
-```
-
-### Sample Response
-
-```json
-{
-  "data": {
-    "auth_url": "http://10.172.80.148:5000/v3/",
-    "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb..."
-  }
-}
-```
-
-## Configure Lease
-
-This endpoint configures lease settings for the OpenStack secrets engine. It is optional, as there are default values
-for `lease` and `lease_max`.
-
-| Method   | Path                      |
-|:---------|:--------------------------|
-| `POST`   | `/openstack/lease/:cloud` |
-
-### Parameters
-
-- `lease` `(string: <required>)` – Specifies the lease value provided as a string duration with time suffix. "h" (hour)
-  is the largest suffix.
-
-- `lease_max` `(string: <required>)` – Specifies the maximum lease value provided as a string duration with time
-  suffix. "h" (hour) is the largest suffix.
-
-### Sample Payload
-
-```json
-{
-  "lease": "30m",
-  "lease_max": "12h"
-}
-```
-
-### Sample Request
-
-```shell
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/lease/example-cloud
-```
-
-## Read Lease
-
-This endpoint returns the current lease settings for the OpenStack secrets engine.
-
-| Method    | Path                         |
-|:----------|:-----------------------------|
-| `GET`     | `/openstack/lease/:cloud`    |
-
-### Sample Request
-
-```shell
-$ curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/lease/example-cloud
-```
-
-### Sample Response
-
-```json
-{
-  "data": {
-    "lease": "30m0s",
-    "lease_max": "12h0m0s"
-  }
-}
+  http://127.0.0.1:8200/v1/openstack/rotate-root/:cloud
 ```
 
 ## Create/Update Role
@@ -183,10 +106,35 @@ created. If the role exists, it will be updated with the new attributes.
 
 - `name` `(string: <required>)` – Specifies the name of the role to create. This is part of the request URL.
 
+- `cloud` `(string: <required>)` - Specifies root configuration of the created role.
+
+- `root` `(bool: <optional>)` - Specifies whenever to use the root user as a role actor.
+  If set to `true`, `secret_type` can't be set to `password`.
+  If set to `true`, `user_groups` value is ignored.
+  If set to `true`, `ttl` value is ignored.
+
+- `ttl` `(string: "1h")` - Specifies TTL value for the dynamically created users as a
+  string duration with time suffix.
+
+- `secret_type` `(string: "token")` - Specifies what kind of secret will configuration contain.
+  Valid choices are `token` and `password`.
+
 - `user_groups` `(list: []`) - Specifies list of existing OpenStack groups this Vault role is allowed to assume.
   This is a comma-separated string or JSON array.
 
-- `scope` `(string: <required>)` - Specifies role scope. Possible values are `domain`, `project`. 
+- `project_id` `(string: <optional>)` - Create a project-scoped role with given project ID. Mutually exclusive with
+  `project_name`.
+
+- `project_name` `(string: <optional>)` - Create a project-scoped role with given project name. Mutually exclusive with
+  `project_id`.
+
+When none of `project_name` or `project_id` is set, created role will have a project scope.
+
+- `extensions` `(list: [])` - A list of strings representing a key/value pair to be used as extensions to the cloud
+  configuration (e.g. `volume_api_version` or endpoint overrides). Format is a key and value
+  separated by an `=` (e.g. `test_key=value`). Note: when using the CLI multiple tags
+  can be specified in the role configuration by adding another `extensions` assignment
+  in the same command.
 
 ### Sample Request
 
@@ -200,9 +148,12 @@ $ curl \
 
 ### Sample Payload
 
+#### Creating a role with project scope
+
 ```json
 {
-  "scope": "project",
+  "cloud": "example-cloud",
+  "project_name": "test",
   "user_groups": [
     "default",
     "testing"
@@ -210,6 +161,63 @@ $ curl \
 }
 ```
 
+#### Creating a role using root user
+
+```json
+{
+  "cloud": "example-cloud",
+  "root": true,
+  "project_name": "test"
+}
+```
+
+#### Creating a role for password-based access
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "secret_type": "password",
+  "user_groups": [
+    "default",
+    "testing"
+  ]
+}
+```
+
+#### Creating a role with endpoint override
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "user_groups": [
+    "default",
+    "testing"
+  ],
+  "extensions": [
+    "volume_api_version=3",
+    "object_store_endpoint_override=https://swift.example.com"
+  ]
+}
+```
+
+or 
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "user_groups": [
+    "default",
+    "testing"
+  ],
+  "extensions": {
+    "volume_api_version": 3,
+    "object_store_endpoint_override": "https://swift.example.com"
+  }
+}
+```
 
 ## Read Role
 
@@ -236,11 +244,15 @@ $ curl \
 
 ```json
 {
-  "scope": "project",
+  "cloud": "example-cloud",
+  "root": false,
+  "secret_type": "password",
+  "project_name": "test",
   "user_groups": [
     "default",
     "testing"
-  ]
+  ],
+  "ttl": "1h30m"
 }
 ```
 
@@ -250,7 +262,7 @@ This endpoint generates a new service credentials based on the named role.
 
 | Method   | Path                     |
 |:---------|:-------------------------|
-| `GET`    | `/openstack/issue/:name` |
+| `GET`    | `/openstack/creds/:name` |
 
 ### Parameters
 
@@ -261,16 +273,45 @@ This endpoint generates a new service credentials based on the named role.
 ```shell
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/issue/example-role
+    http://127.0.0.1:8200/v1/openstack/creds/example-role
 ```
 
-### Sample Response
+### Sample Responses
+
+#### Credentials for the token-type role
 
 ```json
 {
   "data": {
-    "auth_url": "http://10.172.80.148:5000/v3/",
+    "auth_url": "https://example.com/v3/",
     "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb..."
+  }
+}
+```
+
+#### Credentials for the password-type role with project scope
+
+```json
+{
+  "data": {
+    "auth_url": "https://example.com/v3/",
+    "username": "admin",
+    "password": "RcigTiYrJjVmEkrV71Cd",
+    "project_name": "test",
+    "project_domain_name": "Default"
+  }
+}
+```
+
+#### Credentials for the password-type role with domain scope
+
+```json
+{
+  "data": {
+    "auth_url": "https://example.com/v3/",
+    "username": "admin",
+    "password": "RcigTiYrJjVmEkrV71Cd",
+    "user_domain_name": "Default"
   }
 }
 ```
