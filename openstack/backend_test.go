@@ -94,21 +94,40 @@ func TestSharedCloud_client(t *testing.T) {
 	})
 
 	t.Run("new-client", func(t *testing.T) {
+		authURL := testClient.Endpoint + "v3"
+
 		th.Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 
 			w.WriteHeader(http.StatusCreated)
-			_, _ = fmt.Fprintf(w, `{
-			"token": {
-				"expires_at": "2014-10-02T13:45:00.000000Z"
-			}
-		}`)
+			_, _ = fmt.Fprintf(w, `
+{
+  "token": {
+    "expires_at": "2014-10-02T13:45:00.000000Z",
+    "catalog": [
+      {
+        "endpoints": [
+          {
+            "id": "id",
+            "interface": "public",
+            "region": "RegionOne",
+            "region_id": "RegionOne",
+            "url": "%s"
+          }
+        ],
+        "id": "idk",
+        "name": "keystone",
+        "type": "identity"
+      }
+    ]
+  }
+}
+`, authURL)
 		})
 
 		cloud := &sharedCloud{name: tools.RandomString("cl", 5)}
-		authURL := testClient.Endpoint + "v3"
 
 		entry, err := logical.StorageEntryJSON(cloudKey(cloud.name), OsCloud{
 			AuthURL:        authURL,

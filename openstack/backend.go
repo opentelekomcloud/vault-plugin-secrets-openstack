@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -83,14 +82,9 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 			Password:       cloud.Password,
 			UserDomainName: cloud.UserDomainName,
 		},
-		RegionName: cloud.Region,
 	}
 
-	pClient, err := clientconfig.AuthenticatedClient(clientOpts)
-	if err != nil {
-		return err
-	}
-	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
+	sClient, err := clientconfig.NewServiceClient("identity", clientOpts)
 	if err != nil {
 		return err
 	}
