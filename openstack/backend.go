@@ -10,17 +10,21 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const backendHelp = "OpenStack Token Backend"
+const (
+	backendHelp = "OpenStack Token Backend"
+)
 
-const backendSecretType = "openstack_token"
+type sharedCloud struct {
+	name string
+
+	client *gophercloud.ServiceClient
+	lock   sync.Mutex
+}
 
 type backend struct {
 	*framework.Backend
 
-	client     *gophercloud.ProviderClient
-	clientOpts *clientconfig.ClientOpts
-
-	lock sync.Mutex
+	clouds map[string]*sharedCloud
 }
 
 func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
@@ -31,83 +35,70 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			Unauthenticated: []string{
 				infoPattern,
 			},
-			SealWrapStorage: []string{
-				pathConfig,
-			},
 		},
 		Paths: []*framework.Path{
 			pathInfo,
-			b.pathConfig(),
-			b.pathToken(),
-		},
-		Secrets: []*framework.Secret{
-			secretToken(b),
 		},
 		BackendType: logical.TypeLogical,
-		Invalidate:  b.invalidate,
 	}
 	return b, nil
 }
 
-func (b *backend) reset() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.client = nil
-	b.clientOpts = nil
+func (b *backend) getSharedCloud(name string) *sharedCloud {
+	if c, ok := b.clouds[name]; ok {
+		return c
+	}
+	cloud := &sharedCloud{name: name}
+	b.clouds[name] = cloud
+	return cloud
 }
 
-func (b *backend) invalidate(_ context.Context, key string) {
-	switch key {
-	case "config":
-		b.reset()
-	}
-}
+func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gophercloud.ServiceClient, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-func (b *backend) getClient(ctx context.Context, s logical.Storage) (*gophercloud.ProviderClient, error) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	if b.client != nil {
-		return b.client, nil
+	if c.client != nil {
+		return c.client, nil
 	}
 
-	err := b.initClient(ctx, s)
+	err := c.initClient(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	return b.client, nil
+	return c.client, nil
 }
 
-func (b *backend) initClient(ctx context.Context, s logical.Storage) error {
-	config, err := b.getConfig(ctx, s)
+func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
+	cloud, err := c.getCloudConfig(ctx, s)
 	if err != nil {
 		return err
-	}
-
-	if config == nil {
-		config = new(osConfig)
 	}
 
 	clientOpts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     config.AuthURL,
-			Username:    config.Username,
-			Password:    config.Password,
-			ProjectName: config.ProjectName,
-			DomainName:  config.DomainName,
+			AuthURL:        cloud.AuthURL,
+			Username:       cloud.Username,
+			Password:       cloud.Password,
+			UserDomainName: cloud.UserDomainName,
 		},
-		RegionName: config.Region,
 	}
 
-	b.clientOpts = clientOpts
-
-	client, err := clientconfig.AuthenticatedClient(clientOpts)
+	sClient, err := clientconfig.NewServiceClient("identity", clientOpts)
 	if err != nil {
 		return err
 	}
-	b.client = client
+
+	c.client = sClient
 
 	return nil
+}
+
+type OsCloud struct {
+	Name           string
+	AuthURL        string `json:"auth_url"`
+	UserDomainName string `json:"user_domain_name"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	Region         string `json:"region"`
 }
