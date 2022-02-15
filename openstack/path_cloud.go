@@ -11,9 +11,9 @@ import (
 const (
 	pathCloud = "cloud"
 
-	pathCloudHelpSyn = `Configure the root credentials of OpenStack secrets plugin for a cloud.`
+	pathCloudHelpSyn = `Configure the root credentials for an OpenStack cloud.`
 	pathCloudHelpDes = `
-Configure the root credentials of OpenStack secrets plugin for a cloud using the above parameters.
+Configure the root credentials for an OpenStack cloud using the above parameters.
 `
 )
 
