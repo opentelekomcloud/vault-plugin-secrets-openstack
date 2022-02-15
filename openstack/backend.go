@@ -38,6 +38,7 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 		},
 		Paths: []*framework.Path{
 			pathInfo,
+			b.pathCloud(),
 		},
 		BackendType: logical.TypeLogical,
 	}
@@ -49,6 +50,9 @@ func (b *backend) getSharedCloud(name string) *sharedCloud {
 		return c
 	}
 	cloud := &sharedCloud{name: name}
+	if b.clouds == nil {
+		b.clouds = make(map[string]*sharedCloud)
+	}
 	b.clouds[name] = cloud
 	return cloud
 }
@@ -95,10 +99,9 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 }
 
 type OsCloud struct {
-	Name           string
+	Name           string `json:"name"`
 	AuthURL        string `json:"auth_url"`
 	UserDomainName string `json:"user_domain_name"`
 	Username       string `json:"username"`
 	Password       string `json:"password"`
-	Region         string `json:"region"`
 }

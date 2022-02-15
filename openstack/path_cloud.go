@@ -35,7 +35,7 @@ func (c *sharedCloud) getCloudConfig(ctx context.Context, s logical.Storage) (*O
 }
 
 func (cloud *OsCloud) save(ctx context.Context, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON(fmt.Sprintf("%s/%s", pathCloud, cloud.Name), cloud)
+	entry, err := logical.StorageEntryJSON(cloudKey(cloud.Name), cloud)
 	if err != nil {
 		return err
 	}
@@ -92,31 +92,33 @@ func (b *backend) pathCloud() *framework.Path {
 func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	cloud, err := getCloud(ctx, name, r.Storage)
+	sCloud := b.getSharedCloud(name)
+
+	cloudConfig, err := sCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	if cloud == nil {
-		cloud = &OsCloud{
+	if cloudConfig == nil {
+		cloudConfig = &OsCloud{
 			Name: name,
 		}
 	}
 
 	if authURL, ok := d.GetOk("auth_url"); ok {
-		cloud.AuthURL = authURL.(string)
+		cloudConfig.AuthURL = authURL.(string)
 	}
 	if userDomainName, ok := d.GetOk("user_domain_name"); ok {
-		cloud.UserDomainName = userDomainName.(string)
+		cloudConfig.UserDomainName = userDomainName.(string)
 	}
 	if username, ok := d.GetOk("username"); ok {
-		cloud.Username = username.(string)
+		cloudConfig.Username = username.(string)
 	}
 	if password, ok := d.GetOk("password"); ok {
-		cloud.Password = password.(string)
+		cloudConfig.Password = password.(string)
 	}
 
-	if err := cloud.save(ctx, r.Storage); err != nil {
+	if err := cloudConfig.save(ctx, r.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
