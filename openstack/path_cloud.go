@@ -11,8 +11,10 @@ import (
 const (
 	pathCloud = "cloud"
 
-	pathCloudHelpSyn = `Configure the root credentials of OpenStack secrets plugin.`
-	pathCloudHelpDes = `Configure the root credentials of OpenStack secrets plugin using the above parameters.`
+	pathCloudHelpSyn = `Configure the root credentials of OpenStack secrets plugin for a cloud.`
+	pathCloudHelpDes = `
+Configure the root credentials of OpenStack secrets plugin for a cloud using the above parameters.
+`
 )
 
 func cloudKey(name string) string {
