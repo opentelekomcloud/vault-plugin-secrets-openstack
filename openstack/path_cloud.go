@@ -11,8 +11,8 @@ import (
 const (
 	pathCloud = "cloud"
 
-	pathCloudHelpSyn = `bla-bla`
-	pathCloudHelpDes = `bla-bla`
+	pathCloudHelpSyn = `Configure the OpenStack secrets plugin.`
+	pathCloudHelpDes = `Configure the OpenStack secrets plugin using the above parameters.`
 )
 
 func cloudKey(name string) string {
