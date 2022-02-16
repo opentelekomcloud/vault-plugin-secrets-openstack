@@ -39,6 +39,7 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 		Paths: []*framework.Path{
 			pathInfo,
 			b.pathCloud(),
+			b.pathClouds(),
 		},
 		BackendType: logical.TypeLogical,
 	}

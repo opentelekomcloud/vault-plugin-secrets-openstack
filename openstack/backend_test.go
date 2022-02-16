@@ -129,7 +129,7 @@ func TestSharedCloud_client(t *testing.T) {
 
 		cloud := &sharedCloud{name: tools.RandomString("cl", 5)}
 
-		entry, err := logical.StorageEntryJSON(cloudKey(cloud.name), OsCloud{
+		entry, err := logical.StorageEntryJSON(storageCloudKey(cloud.name), OsCloud{
 			AuthURL:        authURL,
 			Username:       tools.RandomString("u", 5),
 			Password:       tools.RandomString("p", 5),

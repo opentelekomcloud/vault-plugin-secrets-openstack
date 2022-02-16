@@ -2,12 +2,11 @@ package openstack
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,54 +21,25 @@ var (
 )
 
 func TestCloudCreate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
-
-	testClient := thClient.ServiceClient()
-
-	t.Run("Success", func(t *testing.T) {
-		b, storage := testBackend(t)
-
-		authURL := testClient.Endpoint + "v3"
-
-		entry, err := logical.StorageEntryJSON(cloudKey(testCloudName), &OsCloud{
-			Name:           testCloudName,
-			AuthURL:        authURL,
-			UserDomainName: testUserDomainName,
-			Username:       testUsername,
-			Password:       testPassword1,
-		})
-		assert.NoError(t, err)
-		assert.NoError(t, storage.Put(context.Background(), entry))
-
-		res, err := b.HandleRequest(context.Background(), &logical.Request{
-			Storage:   storage,
-			Operation: logical.CreateOperation,
-			Path:      cloudKey(testCloudName),
-		})
-		assert.NoError(t, err)
-		assert.Empty(t, res)
-	})
-
 	t.Run("EmptyConfig", func(t *testing.T) {
 		b, storage := testBackend(t)
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   storage,
 			Operation: logical.CreateOperation,
-			Path:      cloudKey(testCloudName),
+			Path:      pathCloudKey(testCloudName),
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Empty(t, res)
 	})
 
-	t.Run("FullConfig", func(t *testing.T) {
+	t.Run("Create", func(t *testing.T) {
 		b, storage := testBackend(t)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   storage,
 			Operation: logical.CreateOperation,
-			Path:      cloudKey(testCloudName),
+			Path:      pathCloudKey(testCloudName),
 			Data: map[string]interface{}{
 				"name":             testCloudName,
 				"auth_url":         testAuthURL,
@@ -78,11 +48,11 @@ func TestCloudCreate(t *testing.T) {
 				"password":         testPassword1,
 			},
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		sCloud := b.getSharedCloud(testCloudName)
 		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.UserDomainName, testUserDomainName)
 		assert.Equal(t, cloudConfig.Username, testUsername)
@@ -90,52 +60,123 @@ func TestCloudCreate(t *testing.T) {
 		assert.Equal(t, cloudConfig.Name, testCloudName)
 	})
 
-	t.Run("FullConfigUpdate", func(t *testing.T) {
+	t.Run("Update", func(t *testing.T) {
 		b, storage := testBackend(t)
 
-		_, err := b.HandleRequest(context.Background(), &logical.Request{
-			Storage:   storage,
-			Operation: logical.CreateOperation,
-			Path:      cloudKey(testCloudName),
-			Data: map[string]interface{}{
-				"name":             testCloudName,
-				"auth_url":         testAuthURL,
-				"user_domain_name": testUserDomainName,
-				"username":         testUsername,
-				"password":         testPassword1,
-			},
+		entry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+			Name:           testCloudName,
+			AuthURL:        testAuthURL,
+			UserDomainName: testUserDomainName,
+			Username:       testUsername,
+			Password:       testPassword1,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NoError(t, storage.Put(context.Background(), entry))
 
 		sCloud := b.getSharedCloud(testCloudName)
 		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
-		assert.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
-		assert.Equal(t, cloudConfig.UserDomainName, testUserDomainName)
-		assert.Equal(t, cloudConfig.Username, testUsername)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
-		assert.Equal(t, cloudConfig.Name, testCloudName)
 
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   storage,
 			Operation: logical.UpdateOperation,
-			Path:      cloudKey(testCloudName),
+			Path:      pathCloudKey(testCloudName),
 			Data: map[string]interface{}{
-				"name":             testCloudName,
-				"auth_url":         testAuthURL,
-				"user_domain_name": testUserDomainName,
-				"username":         testUsername,
-				"password":         testPassword2,
+				"password": testPassword2,
 			},
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		cloudConfig, err = sCloud.getCloudConfig(context.Background(), storage)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.UserDomainName, testUserDomainName)
 		assert.Equal(t, cloudConfig.Username, testUsername)
 		assert.Equal(t, cloudConfig.Password, testPassword2)
 		assert.Equal(t, cloudConfig.Name, testCloudName)
+	})
+
+	t.Run("Read", func(t *testing.T) {
+		b, storage := testBackend(t)
+
+		entry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+			Name:           testCloudName,
+			AuthURL:        testAuthURL,
+			UserDomainName: testUserDomainName,
+			Username:       testUsername,
+			Password:       testPassword1,
+		})
+		require.NoError(t, err)
+		require.NoError(t, storage.Put(context.Background(), entry))
+
+		sCloud := b.getSharedCloud(testCloudName)
+		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
+		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
+		assert.Equal(t, cloudConfig.Password, testPassword1)
+
+		res, err := b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      pathCloudKey(testCloudName),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, res.Data["auth_url"], testAuthURL)
+		assert.Equal(t, res.Data["user_domain_name"], testUserDomainName)
+		assert.Equal(t, res.Data["username"], testUsername)
+		assert.Equal(t, res.Data["password"], testPassword1)
+	})
+
+	t.Run("Delete", func(t *testing.T) {
+		b, storage := testBackend(t)
+
+		entry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+			Name:           testCloudName,
+			AuthURL:        testAuthURL,
+			UserDomainName: testUserDomainName,
+			Username:       testUsername,
+			Password:       testPassword1,
+		})
+		require.NoError(t, err)
+		require.NoError(t, storage.Put(context.Background(), entry))
+
+		sCloud := b.getSharedCloud(testCloudName)
+		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
+		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
+		assert.Equal(t, cloudConfig.Password, testPassword1)
+
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: logical.DeleteOperation,
+			Path:      pathCloudKey(testCloudName),
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("List", func(t *testing.T) {
+		b, storage := testBackend(t)
+
+		cloudCount := tools.RandomInt(1, 10)
+
+		for i := 0; i < cloudCount; i++ {
+			name := strings.ToLower(tools.RandomString("name", 3))
+
+			tmpCloud := &OsCloud{
+				Name:           name,
+				AuthURL:        testAuthURL,
+				UserDomainName: testUserDomainName,
+				Username:       testUsername,
+				Password:       testPassword1,
+			}
+			require.NoError(t, tmpCloud.save(context.Background(), storage))
+		}
+
+		res, err := b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: logical.ListOperation,
+			Path:      "clouds/",
+		})
+		require.NoError(t, err)
+		assert.Len(t, res.Data["keys"], cloudCount)
 	})
 }
