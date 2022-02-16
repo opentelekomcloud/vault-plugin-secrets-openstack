@@ -75,6 +75,7 @@ func TestCloudCreate(t *testing.T) {
 
 		sCloud := b.getSharedCloud(testCloudName)
 		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
+		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
 
@@ -112,6 +113,7 @@ func TestCloudCreate(t *testing.T) {
 
 		sCloud := b.getSharedCloud(testCloudName)
 		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
+		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
 
@@ -142,6 +144,7 @@ func TestCloudCreate(t *testing.T) {
 
 		sCloud := b.getSharedCloud(testCloudName)
 		cloudConfig, err := sCloud.getCloudConfig(context.Background(), storage)
+		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
 
