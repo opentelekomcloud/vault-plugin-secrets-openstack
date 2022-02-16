@@ -3,26 +3,33 @@ package openstack
 import (
 	"context"
 	"fmt"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	pathCloud = "cloud"
+	pathCloud         = "cloud"
+	pathClouds        = "clouds/?"
+	cloudsStoragePath = "clouds"
 
 	pathCloudHelpSyn = `Configure the root credentials for an OpenStack cloud.`
 	pathCloudHelpDes = `
 Configure the root credentials for an OpenStack cloud using the above parameters.
 `
+	pathCloudListHelpSyn  = `List existing OpenStack clouds.`
+	pathCloudListHelpDesc = `List existing OpenStack clouds by name.`
 )
 
-func cloudKey(name string) string {
+func storageCloudKey(name string) string {
+	return fmt.Sprintf("%s/%s", cloudsStoragePath, name)
+}
+
+func pathCloudKey(name string) string {
 	return fmt.Sprintf("%s/%s", pathCloud, name)
 }
 
 func (c *sharedCloud) getCloudConfig(ctx context.Context, s logical.Storage) (*OsCloud, error) {
-	entry, err := s.Get(ctx, cloudKey(c.name))
+	entry, err := s.Get(ctx, storageCloudKey(c.name))
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +44,7 @@ func (c *sharedCloud) getCloudConfig(ctx context.Context, s logical.Storage) (*O
 }
 
 func (cloud *OsCloud) save(ctx context.Context, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON(cloudKey(cloud.Name), cloud)
+	entry, err := logical.StorageEntryJSON(storageCloudKey(cloud.Name), cloud)
 	if err != nil {
 		return err
 	}
@@ -82,12 +89,31 @@ func (b *backend) pathCloud() *framework.Path {
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathCloudCreateUpdate,
 			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCloudRead,
+			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCloudCreateUpdate,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathCloudDelete,
 			},
 		},
 		HelpSynopsis:    pathCloudHelpSyn,
 		HelpDescription: pathCloudHelpDes,
+	}
+}
+
+func (b *backend) pathClouds() *framework.Path {
+	return &framework.Path{
+		Pattern: pathClouds,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCloudList,
+			},
+		},
+		HelpSynopsis:    pathCloudListHelpSyn,
+		HelpDescription: pathCloudListHelpDesc,
 	}
 }
 
@@ -125,4 +151,43 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	sCloud := b.getSharedCloud(name)
+
+	cloudConfig, err := sCloud.getCloudConfig(ctx, r.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"auth_url":         cloudConfig.AuthURL,
+			"user_domain_name": cloudConfig.UserDomainName,
+			"username":         cloudConfig.Username,
+			"password":         cloudConfig.Password,
+		},
+	}, nil
+}
+
+func (b *backend) pathCloudDelete(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	if err := r.Storage.Delete(ctx, storageCloudKey(name)); err != nil {
+		return nil, fmt.Errorf("error deleting cloud: %w", err)
+	}
+
+	return nil, nil
+}
+
+func (b *backend) pathCloudList(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	clouds, err := r.Storage.List(ctx, cloudsStoragePath+"/")
+	if err != nil {
+		return nil, fmt.Errorf("error listing clouds: %w", err)
+	}
+
+	return logical.ListResponse(clouds), nil
 }
