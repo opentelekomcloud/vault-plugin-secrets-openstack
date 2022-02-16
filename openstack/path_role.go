@@ -13,10 +13,25 @@ import (
 const (
 	rolesStoragePath = "roles"
 	pathRoles        = `roles/?`
+
+	errInvalidForRoot = "impossible to set %s for the root user"
+
+	rolesListHelpSyn  = `List existing roles.`
+	rolesListHelpDesc = `
+List existing roles by name. Supports filtering by cloud.
+`
+	roleHelpSyn  = "Manage the Vault roles used to generate OpenStack credentials."
+	roleHelpDesc = `
+This path allows you to read and write roles that are used to generate OpenStack login
+credentials. These roles are associated with either an existing user, or a list of user groups,
+which are used to control permissions to OpenStack resources.
+`
 )
 
 var (
 	pathRole = fmt.Sprintf("role/%s", framework.GenericNameRegex("name"))
+
+	errRoleGet = errors.New("error searching for the role")
 )
 
 func (b *backend) pathRoles() *framework.Path {
@@ -34,6 +49,8 @@ func (b *backend) pathRoles() *framework.Path {
 				Callback: b.pathRolesList,
 			},
 		},
+		HelpSynopsis:    rolesListHelpSyn,
+		HelpDescription: rolesListHelpDesc,
 	}
 }
 
@@ -41,14 +58,13 @@ func (b *backend) pathRole() *framework.Path {
 	return &framework.Path{
 		Pattern: pathRole,
 		Fields: map[string]*framework.FieldSchema{
-			"cloud": {
-				Type:        framework.TypeNameString,
-				Description: "Specifies root configuration of the created role.",
-				Required:    true,
-			},
 			"name": {
-				Type:        framework.TypeNameString,
+				Type:        framework.TypeString,
 				Description: "Specifies the name of the role to create. This is part of the request URL.",
+			},
+			"cloud": {
+				Type:        framework.TypeString,
+				Description: "Specifies root configuration of the created role.",
 			},
 			"root": {
 				Type:        framework.TypeBool,
@@ -98,8 +114,9 @@ func (b *backend) pathRole() *framework.Path {
 				Callback: b.pathRoleDelete,
 			},
 		},
-
-		ExistenceCheck: b.roleExistenceCheck,
+		ExistenceCheck:  b.roleExistenceCheck,
+		HelpSynopsis:    roleHelpSyn,
+		HelpDescription: roleHelpDesc,
 	}
 }
 
@@ -119,9 +136,9 @@ const (
 )
 
 type roleEntry struct {
-	Cloud       string            `json:"cloud"`
+	Cloud       string            `json:"cloud,omitempty"`
 	Root        bool              `json:"root"`
-	TTL         time.Duration     `json:"ttl"`
+	TTL         time.Duration     `json:"ttl,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
 	UserGroups  []string          `json:"user_groups"`
 	ProjectID   string            `json:"project_id"`
@@ -176,8 +193,6 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 	}
 }
 
-var errRoleGet = errors.New("error searching for the role")
-
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := getRole(ctx, d, req.Storage)
 	if err != nil {
@@ -192,8 +207,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 		Data: data,
 	}, nil
 }
-
-const errInvalidForRoot = "impossible to set %s for the root user"
 
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
@@ -211,6 +224,10 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 
 	if cloud, ok := d.GetOk("cloud"); ok {
 		entry.Cloud = cloud.(string)
+	} else {
+		if req.Operation == logical.CreateOperation {
+			return logical.ErrorResponse("cloud is required when creating a role"), nil
+		}
 	}
 
 	if isRoot, ok := d.GetOk("root"); ok {

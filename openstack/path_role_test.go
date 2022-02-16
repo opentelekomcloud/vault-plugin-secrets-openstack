@@ -378,21 +378,40 @@ func TestRoleCreate(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		cases := map[string]*roleEntry{
+		type errRoleEntry struct {
+			*roleEntry
+			errorRegex *regexp.Regexp
+		}
+
+		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
+		cases := map[string]*errRoleEntry{
 			"root-ttl": {
-				Cloud: randomRoleName(),
-				Root:  true,
-				TTL:   1 * time.Hour,
+				roleEntry: &roleEntry{
+					Cloud: randomRoleName(),
+					Root:  true,
+					TTL:   1 * time.Hour,
+				},
+				errorRegex: notForRootRe,
 			},
 			"root-password": {
-				Cloud:      randomRoleName(),
-				Root:       true,
-				SecretType: SecretPassword,
+				roleEntry: &roleEntry{
+					Cloud:      randomRoleName(),
+					Root:       true,
+					SecretType: SecretPassword,
+				},
+				errorRegex: notForRootRe,
 			},
 			"root-user-groups": {
-				Cloud:      randomRoleName(),
-				Root:       true,
-				UserGroups: []string{"ug-1"},
+				roleEntry: &roleEntry{
+					Cloud:      randomRoleName(),
+					Root:       true,
+					UserGroups: []string{"ug-1"},
+				},
+				errorRegex: notForRootRe,
+			},
+			"without-cloud": {
+				roleEntry:  &roleEntry{},
+				errorRegex: regexp.MustCompile(`cloud is required when creating a role`),
 			},
 		}
 
@@ -403,7 +422,7 @@ func TestRoleCreate(t *testing.T) {
 				b, s := testBackend(t)
 
 				roleName := randomRoleName()
-				inputRole := fixtures.SanitizedMap(roleToMap(data))
+				inputRole := fixtures.SanitizedMap(roleToMap(data.roleEntry))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.CreateOperation,
@@ -413,7 +432,7 @@ func TestRoleCreate(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.True(t, resp.IsError())
-				assert.Regexp(t, regexp.MustCompile(`impossible to set .+ for the root user`), resp.Data["error"])
+				assert.Regexp(t, data.errorRegex, resp.Data["error"])
 			})
 		}
 	})
@@ -458,17 +477,20 @@ func TestRoleUpdate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
 		_, exp := expectedRoleData()
-		_, exp2 := expectedRoleData()
+		exp2 := &roleEntry{
+			ProjectID:   "",
+			ProjectName: tools.RandomString("p", 5),
+		}
 		saveRawRole(t, roleName, exp, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      rolePath(roleName),
-			Data:      exp2,
+			Data:      roleToMap(exp2),
 			Storage:   s,
 		})
 		require.NoError(t, err)
-		assert.False(t, resp.IsError())
+		assert.False(t, resp.IsError(), resp)
 	})
 
 	t.Run("not-existing", func(t *testing.T) {
