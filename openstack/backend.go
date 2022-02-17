@@ -42,6 +42,7 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			b.pathClouds(),
 			b.pathRole(),
 			b.pathRoles(),
+			b.pathRotateRoot(),
 		},
 		BackendType: logical.TypeLogical,
 	}
@@ -60,6 +61,7 @@ func (b *backend) getSharedCloud(name string) *sharedCloud {
 	return cloud
 }
 
+// getClient returns initialized Keystone service client
 func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gophercloud.ServiceClient, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
