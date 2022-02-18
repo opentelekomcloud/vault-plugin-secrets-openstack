@@ -16,6 +16,11 @@ const (
 	nameDefaultSet = `0123456789abcdefghijklmnopqrstuvwxyz`
 
 	pathCreds = "creds"
+
+	credsHelpSyn  = "Manage the OpenStack credentials with roles."
+	credsHelpDesc = `
+This path allows you to create OpenStack token or temporary user using predefined roles.
+`
 )
 
 func secretToken(b *backend) *framework.Secret {
@@ -67,8 +72,8 @@ func (b *backend) pathCreds() *framework.Path {
 				Callback: b.pathCredsRead,
 			},
 		},
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    credsHelpSyn,
+		HelpDescription: credsHelpDesc,
 	}
 }
 
