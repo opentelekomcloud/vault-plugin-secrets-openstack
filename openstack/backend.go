@@ -45,6 +45,7 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			b.pathRole(),
 			b.pathRoles(),
 			b.pathRotateRoot(),
+			b.pathCreds(),
 		},
 		BackendType: logical.TypeLogical,
 	}

@@ -70,8 +70,9 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 				return nil, err
 			}
 			data = map[string]interface{}{
-				"auth_url": cloudConfig.AuthURL,
-				"token":    token.ID,
+				"auth_url":   cloudConfig.AuthURL,
+				"token":      token.ID,
+				"expires_at": token.ExpiresAt.String(),
 			}
 			secret = &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -108,8 +109,9 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 				return nil, err
 			}
 			data = map[string]interface{}{
-				"auth_url": cloudConfig.AuthURL,
-				"token":    token.ID,
+				"auth_url":   cloudConfig.AuthURL,
+				"token":      token.ID,
+				"expires_at": token.ExpiresAt.String(),
 			}
 			secret = &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
