@@ -47,6 +47,10 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			b.pathRotateRoot(),
 			b.pathCreds(),
 		},
+		Secrets: []*framework.Secret{
+			secretToken(b),
+			secretUser(b),
+		},
 		BackendType: logical.TypeLogical,
 	}
 	return b, nil
