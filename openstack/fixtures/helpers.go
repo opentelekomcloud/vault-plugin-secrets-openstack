@@ -99,7 +99,7 @@ func handleGetToken(t *testing.T, w http.ResponseWriter, r *http.Request, userID
 `, userID)
 }
 
-func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request) {
+func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
 	t.Helper()
 
 	th.TestHeader(t, r, "Content-Type", "application/json")
@@ -110,34 +110,20 @@ func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `
 {
     "user": {
-        "default_project_id": "263fd9",
+        "default_project_id": "project",
         "description": "James Doe user",
-        "domain_id": "1789d1",
+        "domain_id": "domain",
         "email": "jdoe@example.com",
         "enabled": true,
-        "federated": [
-            {
-                "idp_id": "efbab5a6acad4d108fec6c63d9609d83",
-                "protocols": [
-                    {
-                        "protocol_id": "mapped",
-                        "unique_id": "test@example.com"
-                    }
-                ]
-            }
-        ],
-        "id": "ff4e51",
+        "id": "%[1]s",
         "links": {
-            "self": "https://example.com/identity/v3/users/ff4e51"
+            "self": "https://example.com/identity/v3/users/%[1]s"
         },
         "name": "James Doe",
-        "options": {
-            "ignore_password_expiry": true
-        },
         "password_expires_at": "2016-11-06T15:32:17.000000"
     }
 }
-`)
+`, userID)
 }
 
 type EnabledMocks struct {
@@ -172,7 +158,7 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 		switch r.Method {
 		case "POST":
 			if enabled.UserPost {
-				handleCreateUser(t, w, r)
+				handleCreateUser(t, w, r, userID)
 			}
 		default:
 			w.WriteHeader(404)
