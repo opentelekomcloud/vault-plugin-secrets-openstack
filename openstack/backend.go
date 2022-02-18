@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	backendHelp = "OpenStack Token Backend"
+	backendSecretTypeToken = "openstack_token"
+	backendSecretTypeUser  = "openstack_user"
+	backendHelp            = "OpenStack Token Backend"
 )
 
 type sharedCloud struct {
