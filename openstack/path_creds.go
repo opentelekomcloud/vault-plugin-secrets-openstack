@@ -158,15 +158,17 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			"username": user.Name,
 			"password": password,
 		}
-		if id := role.ProjectID; id != "" {
+		switch {
+		case role.ProjectID != "":
 			data["project_id"] = role.ProjectID
 			data["project_domain_id"] = user.DomainID
-		} else if name := role.ProjectName; name != "" {
+		case role.ProjectName != "":
 			data["project_name"] = role.ProjectName
 			data["project_domain_id"] = user.DomainID
-		} else {
+		default:
 			data["user_domain_id"] = user.DomainID
 		}
+
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
