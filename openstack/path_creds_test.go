@@ -19,7 +19,7 @@ func credsPath(name string) string {
 	return fmt.Sprintf("%s/%s", "creds", name)
 }
 
-func TestCredentialsRead(t *testing.T) {
+func TestCredentialsRead_ok(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
 	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{
 		TokenPost:   true,
@@ -126,6 +126,147 @@ func TestCredentialsRead(t *testing.T) {
 		})
 		require.NoError(t, err)
 	})
+}
+
+func TestCredentialsRead_error(t *testing.T) {
+	t.Run("read-fail", func(t *testing.T) {
+		userID, _ := uuid.GenerateUUID()
+		fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{})
+
+		b, s := testBackend(t, failVerbRead)
+
+		roleName := createSaveRandomRole(t, s, true, "token")
+
+		_, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      credsPath(roleName),
+			Operation: logical.ReadOperation,
+			Storage:   s,
+		})
+		require.Error(t, err)
+	})
+
+	type testCase struct {
+		EnabledMocks fixtures.EnabledMocks
+		Root         bool
+		ServiceType  string
+	}
+
+	cases := map[string]testCase{
+		"no-user-post": {
+			EnabledMocks: fixtures.EnabledMocks{
+				TokenPost: true,
+			},
+			Root:        false,
+			ServiceType: "token",
+		},
+		"no-users-token-post": {
+			EnabledMocks: fixtures.EnabledMocks{
+				UserPost: true,
+			},
+			Root:        false,
+			ServiceType: "token",
+		},
+	}
+
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			data := data
+			userID, _ := uuid.GenerateUUID()
+			fixtures.SetupKeystoneMock(t, userID, data.EnabledMocks)
+
+			b, s := testBackend(t)
+
+			roleName := createSaveRandomRole(t, s, data.Root, data.ServiceType)
+
+			testClient := thClient.ServiceClient()
+			authURL := testClient.Endpoint + "v3"
+
+			cloudEntry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+				Name:           testCloudName,
+				AuthURL:        authURL,
+				UserDomainName: testUserDomainName,
+				Username:       testUsername,
+				Password:       testPassword1,
+			})
+			require.NoError(t, err)
+			require.NoError(t, s.Put(context.Background(), cloudEntry))
+
+			_, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      credsPath(roleName),
+				Storage:   s,
+			})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestCredentialsRevoke_error(t *testing.T) {
+	type testCase struct {
+		EnabledMocks fixtures.EnabledMocks
+		Root         bool
+		ServiceType  string
+	}
+
+	cases := map[string]testCase{
+		"no-token-delete": {
+			EnabledMocks: fixtures.EnabledMocks{
+				TokenPost: true,
+			},
+			Root:        true,
+			ServiceType: "token",
+		},
+		"no-user-delete": {
+			EnabledMocks: fixtures.EnabledMocks{
+				UserPost:  true,
+				TokenPost: true,
+			},
+			Root:        false,
+			ServiceType: "token",
+		},
+	}
+
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			data := data
+			userID, _ := uuid.GenerateUUID()
+			fixtures.SetupKeystoneMock(t, userID, data.EnabledMocks)
+
+			b, s := testBackend(t)
+
+			roleName := createSaveRandomRole(t, s, data.Root, data.ServiceType)
+
+			testClient := thClient.ServiceClient()
+			authURL := testClient.Endpoint + "v3"
+
+			cloudEntry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+				Name:           testCloudName,
+				AuthURL:        authURL,
+				UserDomainName: testUserDomainName,
+				Username:       testUsername,
+				Password:       testPassword1,
+			})
+			require.NoError(t, err)
+			require.NoError(t, s.Put(context.Background(), cloudEntry))
+
+			res, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      credsPath(roleName),
+				Storage:   s,
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, res.Data)
+
+			_, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.RevokeOperation,
+				Path:      credsPath(roleName),
+				Secret:    res.Secret,
+				Data:      res.Data,
+				Storage:   s,
+			})
+			require.Error(t, err)
+		})
+	}
 }
 
 func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, sType string) string {

@@ -148,7 +148,8 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			"expires_at": token.ExpiresAt.String(),
 		}
 		secretInternal = map[string]interface{}{
-			"secret_type": backendSecretTypeToken,
+			"secret_type": backendSecretTypeUser,
+			"user_id":     user.ID,
 		}
 	} else {
 		data = map[string]interface{}{
