@@ -3,6 +3,9 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-uuid"
@@ -10,8 +13,6 @@ import (
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func credsPath(name string) string {
@@ -40,21 +41,6 @@ func TestCredentialsRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("root_password", func(t *testing.T) {
-		require.NoError(t, s.Put(context.Background(), cloudEntry))
-
-		roleName := createSaveRandomRole(t, s, true, "password")
-
-		res, err := b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      credsPath(roleName),
-			Storage:   s,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res.Data)
-		assert.Equal(t, res.Data["username"], testUsername)
-		assert.Equal(t, res.Data["password"], testPassword1)
-	})
 	t.Run("root_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
@@ -95,7 +81,7 @@ func TestCredentialsRead(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Data)
 	})
-	t.Run("root_token_revoke", func(t *testing.T) {
+	t.Run("token_revoke", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
 		roleName := createSaveRandomRole(t, s, true, "token")
@@ -145,6 +131,7 @@ func TestCredentialsRead(t *testing.T) {
 func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, sType string) string {
 	roleName := randomRoleName()
 	role := map[string]interface{}{
+		"name":         roleName,
 		"cloud":        testCloudName,
 		"ttl":          time.Hour / time.Second,
 		"project_name": tools.RandomString("p", 5),

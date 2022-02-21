@@ -24,6 +24,8 @@ This path allows you to create OpenStack token or temporary user using predefine
 `
 )
 
+var errRootNotToken = errors.New("can't generate non-token credentials for the root user")
+
 func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: backendSecretTypeToken,
@@ -78,6 +80,109 @@ func (b *backend) pathCreds() *framework.Path {
 	}
 }
 
+func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
+	if role.SecretType != "token" {
+		return nil, errRootNotToken
+	}
+	tokenOpts := &tokens.AuthOptions{
+		Username:   config.Username,
+		Password:   config.Password,
+		DomainName: config.UserDomainName,
+		Scope: tokens.Scope{
+			DomainName:  config.UserDomainName,
+			ProjectName: role.ProjectName,
+			ProjectID:   role.ProjectID,
+		},
+	}
+	token, err := createToken(client, tokenOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]interface{}{
+		"role":       role.Name,
+		"auth_url":   config.AuthURL,
+		"token":      token.ID,
+		"expires_at": token.ExpiresAt.String(),
+	}
+	secret := &logical.Secret{
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Until(token.ExpiresAt),
+			IssueTime: time.Now(),
+		},
+		InternalData: map[string]interface{}{
+			"secret_type": backendSecretTypeToken,
+		},
+	}
+	return &logical.Response{Data: data, Secret: secret}, nil
+}
+
+func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
+	password := randomString(pwdDefaultSet, 6)
+	user, err := createUser(client, password)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	var secretInternal map[string]interface{}
+	if role.SecretType == "token" {
+		opts := &tokens.AuthOptions{
+			Username:   user.Name,
+			Password:   password,
+			DomainName: config.UserDomainName,
+			Scope: tokens.Scope{
+				ProjectID:   role.ProjectID,
+				ProjectName: role.ProjectName,
+				DomainID:    user.DomainID,
+			},
+		}
+		token, err := createToken(client, opts)
+		if err != nil {
+			return nil, err
+		}
+		data = map[string]interface{}{
+			"role":       role.Name,
+			"auth_url":   config.AuthURL,
+			"token":      token.ID,
+			"expires_at": token.ExpiresAt.String(),
+		}
+		secretInternal = map[string]interface{}{
+			"secret_type": backendSecretTypeToken,
+		}
+	} else {
+		data = map[string]interface{}{
+			"role":     role.Name,
+			"auth_url": config.AuthURL,
+			"username": user.Name,
+			"password": password,
+		}
+		if id := role.ProjectID; id != "" {
+			data["project_id"] = role.ProjectID
+			data["project_domain_id"] = user.DomainID
+		} else if name := role.ProjectName; name != "" {
+			data["project_name"] = role.ProjectName
+			data["project_domain_id"] = user.DomainID
+		} else {
+			data["user_domain_id"] = user.DomainID
+		}
+		secretInternal = map[string]interface{}{
+			"secret_type": backendSecretTypeUser,
+			"user_id":     user.ID,
+		}
+	}
+	return &logical.Response{
+		Data: data,
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       role.TTL * time.Second,
+				IssueTime: time.Now(),
+			},
+			InternalData: secretInternal,
+		},
+	}, nil
+}
+
 func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 	role, err := getRoleByName(ctx, roleName, r.Storage)
@@ -96,102 +201,10 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return nil, err
 	}
 
-	var data map[string]interface{}
-	secret := new(logical.Secret)
 	if role.Root {
-		if role.SecretType == "token" {
-			token, err := createToken(
-				client,
-				cloudConfig.Name,
-				cloudConfig.Password,
-				role.ProjectName,
-				cloudConfig.UserDomainName,
-			)
-			if err != nil {
-				return nil, err
-			}
-			data = map[string]interface{}{
-				"role":       roleName,
-				"auth_url":   cloudConfig.AuthURL,
-				"token":      token.ID,
-				"expires_at": token.ExpiresAt.String(),
-			}
-			secret = &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL:       time.Until(token.ExpiresAt),
-					IssueTime: time.Now(),
-				},
-				InternalData: map[string]interface{}{
-					"secret_type": backendSecretTypeToken,
-				},
-			}
-		} else {
-			data = map[string]interface{}{
-				"role":             roleName,
-				"auth_url":         cloudConfig.AuthURL,
-				"user_domain_name": cloudConfig.UserDomainName,
-				"username":         cloudConfig.Username,
-				"password":         cloudConfig.Password,
-			}
-		}
-	} else {
-		password := randomString(pwdDefaultSet, 6)
-		user, err := createUser(client, password)
-		if err != nil {
-			return nil, err
-		}
-		if role.SecretType == "token" {
-			token, err := createToken(
-				client,
-				user.Name,
-				password,
-				role.ProjectName,
-				cloudConfig.UserDomainName,
-			)
-			if err != nil {
-				return nil, err
-			}
-			data = map[string]interface{}{
-				"role":       roleName,
-				"auth_url":   cloudConfig.AuthURL,
-				"token":      token.ID,
-				"expires_at": token.ExpiresAt.String(),
-			}
-			secret = &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL:       time.Until(token.ExpiresAt),
-					IssueTime: time.Now(),
-				},
-				InternalData: map[string]interface{}{
-					"secret_type": backendSecretTypeToken,
-				},
-			}
-		} else {
-			data = map[string]interface{}{
-				"role":               roleName,
-				"auth_url":           cloudConfig.AuthURL,
-				"username":           user.Name,
-				"password":           password,
-				"domain_id":          user.DomainID,
-				"default_project_id": user.DefaultProjectID,
-			}
-			secret = &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL:       time.Until(time.Now().Add(time.Hour)),
-					IssueTime: time.Now(),
-				},
-				InternalData: map[string]interface{}{
-					"secret_type": backendSecretTypeUser,
-					"user_id":     user.ID,
-				},
-			}
-		}
+		return getRootCredentials(client, role, cloudConfig)
 	}
-
-	return &logical.Response{
-		Data:   data,
-		Secret: secret,
-	}, nil
+	return getTmpUserCredentials(client, role, cloudConfig)
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -265,17 +278,8 @@ func createUser(client *gophercloud.ServiceClient, password string) (*users.User
 	return user, nil
 }
 
-func createToken(client *gophercloud.ServiceClient, username, password, roleProjectName, userDomainName string) (*tokens.Token, error) {
-	tokenOpts := &tokens.AuthOptions{
-		Username:   username,
-		Password:   password,
-		DomainName: userDomainName,
-		Scope: tokens.Scope{
-			DomainName:  userDomainName,
-			ProjectName: roleProjectName,
-		},
-	}
-	token, err := tokens.Create(client, tokenOpts).Extract()
+func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
+	token, err := tokens.Create(client, opts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a token: %w", err)
 	}
