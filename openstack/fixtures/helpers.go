@@ -56,7 +56,9 @@ func handleCreateToken(t *testing.T, w http.ResponseWriter, r *http.Request) {
 	th.TestHeader(t, r, "Accept", "application/json")
 	th.TestMethod(t, r, "POST")
 
+	w.Header().Add("X-Subject-Token", client.TokenID)
 	w.WriteHeader(http.StatusCreated)
+
 	_, _ = fmt.Fprintf(w, `
 {
   "token": {
@@ -99,6 +101,14 @@ func handleGetToken(t *testing.T, w http.ResponseWriter, r *http.Request, userID
 `, userID)
 }
 
+func handleDeleteToken(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+
+	th.TestMethod(t, r, "DELETE")
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
 	t.Helper()
 
@@ -129,8 +139,10 @@ func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
 type EnabledMocks struct {
 	TokenPost      bool
 	TokenGet       bool
+	TokenDelete    bool
 	PasswordChange bool
 	UserPost       bool
+	UserDelete     bool
 }
 
 func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
@@ -148,6 +160,10 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 		case "GET":
 			if enabled.TokenGet {
 				handleGetToken(t, w, r, userID)
+			}
+		case "DELETE":
+			if enabled.TokenDelete {
+				handleDeleteToken(t, w, r)
 			}
 		default:
 			w.WriteHeader(404)
@@ -169,6 +185,16 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s/password", userID), func(w http.ResponseWriter, r *http.Request) {
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
+			th.TestMethod(t, r, "POST")
+
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
+
+	if enabled.UserDelete {
+		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
+			th.TestHeader(t, r, "Accept", "application/json")
+			th.TestMethod(t, r, "DELETE")
 
 			w.WriteHeader(http.StatusNoContent)
 		})

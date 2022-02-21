@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 const (
@@ -29,11 +30,11 @@ func secretToken(b *backend) *framework.Secret {
 		Fields: map[string]*framework.FieldSchema{
 			"token": {
 				Type:        framework.TypeString,
-				Description: "OpenStack token.",
+				Description: "OpenStack Token.",
 			},
 			"role": {
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: "Used role.",
 			},
 		},
 		Revoke: b.tokenRevoke,
@@ -50,7 +51,7 @@ func secretUser(b *backend) *framework.Secret {
 			},
 			"role": {
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: "Used role.",
 			},
 		},
 		Revoke: b.userDelete,
@@ -152,7 +153,6 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 			}
 			data = map[string]interface{}{
 				"role":       roleName,
-				"user_id":    user.ID,
 				"auth_url":   cloudConfig.AuthURL,
 				"token":      token.ID,
 				"expires_at": token.ExpiresAt.String(),
@@ -170,7 +170,6 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 			data = map[string]interface{}{
 				"role":               roleName,
 				"auth_url":           cloudConfig.AuthURL,
-				"user_id":            user.ID,
 				"username":           user.Name,
 				"password":           password,
 				"domain_id":          user.DomainID,
@@ -183,6 +182,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 				},
 				InternalData: map[string]interface{}{
 					"secret_type": backendSecretTypeUser,
+					"user_id":     user.ID,
 				},
 			}
 		}
@@ -195,9 +195,9 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tokenRaw, ok := r.Secret.InternalData["token"]
+	tokenRaw, ok := d.GetOk("token")
 	if !ok {
-		return nil, errors.New("internal data 'token' not found")
+		return nil, errors.New("data 'token' not found")
 	}
 
 	token := tokenRaw.(string)
@@ -214,7 +214,8 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 		return nil, err
 	}
 
-	if err := tokens.Revoke(client, token).Err; err != nil {
+	err = tokens.Revoke(client, token).Err
+	if err != nil {
 		return nil, fmt.Errorf("unable to revoke token: %w", err)
 	}
 
@@ -241,8 +242,9 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 		return nil, err
 	}
 
-	if err := users.Delete(client, userID).ExtractErr(); err != nil {
-		return nil, fmt.Errorf("unable to delete token: %w", err)
+	err = users.Delete(client, userID).ExtractErr()
+	if err != nil {
+		return nil, fmt.Errorf("unable to delete user: %w", err)
 	}
 
 	return &logical.Response{}, nil

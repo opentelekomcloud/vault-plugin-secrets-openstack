@@ -20,7 +20,12 @@ func credsPath(name string) string {
 
 func TestCredentialsRead(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
-	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{TokenPost: true, TokenGet: true, UserPost: true})
+	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{
+		TokenPost:   true,
+		TokenDelete: true,
+		UserPost:    true,
+		UserDelete:  true,
+	})
 
 	testClient := thClient.ServiceClient()
 	authURL := testClient.Endpoint + "v3"
@@ -38,15 +43,7 @@ func TestCredentialsRead(t *testing.T) {
 	t.Run("root_password", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := randomRoleName()
-		role := map[string]interface{}{
-			"cloud":        testCloudName,
-			"ttl":          time.Hour / time.Second,
-			"project_name": tools.RandomString("p", 5),
-			"root":         true,
-			"secret_type":  "password",
-		}
-		saveRawRole(t, roleName, role, s)
+		roleName := createSaveRandomRole(t, s, true, "password")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -61,15 +58,7 @@ func TestCredentialsRead(t *testing.T) {
 	t.Run("root_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := randomRoleName()
-		role := map[string]interface{}{
-			"cloud":        testCloudName,
-			"ttl":          time.Hour / time.Second,
-			"project_name": tools.RandomString("p", 5),
-			"root":         true,
-			"secret_type":  "token",
-		}
-		saveRawRole(t, roleName, role, s)
+		roleName := createSaveRandomRole(t, s, true, "token")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -83,15 +72,7 @@ func TestCredentialsRead(t *testing.T) {
 	t.Run("user_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := randomRoleName()
-		role := map[string]interface{}{
-			"cloud":        testCloudName,
-			"ttl":          time.Hour / time.Second,
-			"project_name": tools.RandomString("p", 5),
-			"root":         false,
-			"secret_type":  "token",
-		}
-		saveRawRole(t, roleName, role, s)
+		roleName := createSaveRandomRole(t, s, false, "token")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -104,15 +85,7 @@ func TestCredentialsRead(t *testing.T) {
 	t.Run("user_password", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := randomRoleName()
-		role := map[string]interface{}{
-			"cloud":        testCloudName,
-			"ttl":          time.Hour / time.Second,
-			"project_name": tools.RandomString("p", 5),
-			"root":         false,
-			"secret_type":  "password",
-		}
-		saveRawRole(t, roleName, role, s)
+		roleName := createSaveRandomRole(t, s, false, "password")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -122,4 +95,63 @@ func TestCredentialsRead(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Data)
 	})
+	t.Run("root_token_revoke", func(t *testing.T) {
+		require.NoError(t, s.Put(context.Background(), cloudEntry))
+
+		roleName := createSaveRandomRole(t, s, true, "token")
+
+		res, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      credsPath(roleName),
+			Storage:   s,
+		})
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Data)
+		require.Equal(t, res.Data["token"], testClient.TokenID)
+
+		res, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.RevokeOperation,
+			Secret:    res.Secret,
+			Data:      res.Data,
+			Storage:   s,
+		})
+		require.NoError(t, err)
+	})
+	t.Run("user_password_revoke", func(t *testing.T) {
+		require.NoError(t, s.Put(context.Background(), cloudEntry))
+
+		roleName := createSaveRandomRole(t, s, false, "password")
+
+		res, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      credsPath(roleName),
+			Storage:   s,
+		})
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Data)
+		require.NotEmpty(t, res.Data["password"])
+		require.NotEmpty(t, res.Secret.InternalData["user_id"])
+
+		res, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.RevokeOperation,
+			Secret:    res.Secret,
+			Data:      res.Data,
+			Storage:   s,
+		})
+		require.NoError(t, err)
+	})
+}
+
+func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, sType string) string {
+	roleName := randomRoleName()
+	role := map[string]interface{}{
+		"cloud":        testCloudName,
+		"ttl":          time.Hour / time.Second,
+		"project_name": tools.RandomString("p", 5),
+		"root":         root,
+		"secret_type":  sType,
+	}
+	saveRawRole(t, roleName, role, s)
+
+	return roleName
 }
