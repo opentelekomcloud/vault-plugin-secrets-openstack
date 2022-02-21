@@ -96,7 +96,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return nil, err
 	}
 
-	data := map[string]interface{}{}
+	var data map[string]interface{}
 	secret := new(logical.Secret)
 	if role.Root {
 		if role.SecretType == "token" {

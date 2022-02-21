@@ -109,7 +109,7 @@ func TestCredentialsRead(t *testing.T) {
 		require.NotEmpty(t, res.Data)
 		require.Equal(t, res.Data["token"], testClient.TokenID)
 
-		res, err = b.HandleRequest(context.Background(), &logical.Request{
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.RevokeOperation,
 			Secret:    res.Secret,
 			Data:      res.Data,
@@ -132,7 +132,7 @@ func TestCredentialsRead(t *testing.T) {
 		require.NotEmpty(t, res.Data["password"])
 		require.NotEmpty(t, res.Secret.InternalData["user_id"])
 
-		res, err = b.HandleRequest(context.Background(), &logical.Request{
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.RevokeOperation,
 			Secret:    res.Secret,
 			Data:      res.Data,
