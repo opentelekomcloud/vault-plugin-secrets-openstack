@@ -136,7 +136,8 @@ const (
 )
 
 type roleEntry struct {
-	Cloud       string            `json:"cloud,omitempty"`
+	Name        string            `json:"name"`
+	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
 	TTL         time.Duration     `json:"ttl,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
@@ -155,8 +156,8 @@ func getRole(ctx context.Context, d *framework.FieldData, s logical.Storage) (*r
 	return getRoleByName(ctx, name, s)
 }
 
-func saveRole(ctx context.Context, name string, e *roleEntry, s logical.Storage) error {
-	storageEntry, err := logical.StorageEntryJSON(roleStoragePath(name), e)
+func saveRole(ctx context.Context, e *roleEntry, s logical.Storage) error {
+	storageEntry, err := logical.StorageEntryJSON(roleStoragePath(e.Name), e)
 	if err != nil {
 		return err
 	}
@@ -219,7 +220,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		if req.Operation == logical.UpdateOperation {
 			return logical.ErrorResponse("role `%s` not found during update operation", name), nil
 		}
-		entry = new(roleEntry)
+		entry = &roleEntry{Name: name}
 	}
 
 	if cloud, ok := d.GetOk("cloud"); ok {
@@ -274,7 +275,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.UserGroups = groups.([]string)
 	}
 
-	if err := saveRole(ctx, name, entry, req.Storage); err != nil {
+	if err := saveRole(ctx, entry, req.Storage); err != nil {
 		return nil, err
 	}
 

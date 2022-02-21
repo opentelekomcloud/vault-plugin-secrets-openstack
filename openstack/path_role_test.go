@@ -315,22 +315,26 @@ func TestRoleCreate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		cases := map[string]*roleEntry{
 			"admin": {
+				Name:  randomRoleName(),
 				Cloud: randomRoleName(),
 				Root:  true,
 			},
 			"token": {
+				Name:        randomRoleName(),
 				Cloud:       randomRoleName(),
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
 			},
 			"password": {
+				Name:        randomRoleName(),
 				Cloud:       randomRoleName(),
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
 				UserGroups:  []string{"default", "testing"},
 			},
 			"ttl": {
+				Name:        randomRoleName(),
 				Cloud:       randomRoleName(),
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
@@ -338,6 +342,7 @@ func TestRoleCreate(t *testing.T) {
 				TTL:         24 * time.Hour,
 			},
 			"endpoint-override": {
+				Name:      randomRoleName(),
 				Cloud:     randomRoleName(),
 				ProjectID: id,
 				Extensions: map[string]string{
@@ -353,7 +358,7 @@ func TestRoleCreate(t *testing.T) {
 				t.Parallel()
 				b, s := testBackend(t)
 
-				roleName := randomRoleName()
+				roleName := data.Name
 				inputRole := fixtures.SanitizedMap(roleToMap(data))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
