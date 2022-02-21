@@ -56,7 +56,7 @@ func (b *backend) pathRotateRoot() *framework.Path {
 	}
 }
 
-func randomPassword(charset string, size int) string {
+func randomString(charset string, size int) string {
 	var bytes = make([]byte, size)
 	_, _ = rand.Read(bytes)
 	for i, b := range bytes {
@@ -83,7 +83,7 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	newPassword := randomPassword(
+	newPassword := randomString(
 		d.Get("charset").(string),
 		d.Get("size").(int),
 	)
