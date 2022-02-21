@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	backendHelp = "OpenStack Token Backend"
+	backendSecretTypeToken = "openstack_token"
+	backendSecretTypeUser  = "openstack_user"
+	backendHelp            = "OpenStack Token Backend"
 )
 
 type sharedCloud struct {
@@ -43,6 +45,11 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 			b.pathRole(),
 			b.pathRoles(),
 			b.pathRotateRoot(),
+			b.pathCreds(),
+		},
+		Secrets: []*framework.Secret{
+			secretToken(b),
+			secretUser(b),
 		},
 		BackendType: logical.TypeLogical,
 	}

@@ -54,8 +54,11 @@ func handleCreateToken(t *testing.T, w http.ResponseWriter, r *http.Request) {
 
 	th.TestHeader(t, r, "Content-Type", "application/json")
 	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "POST")
 
+	w.Header().Add("X-Subject-Token", client.TokenID)
 	w.WriteHeader(http.StatusCreated)
+
 	_, _ = fmt.Fprintf(w, `
 {
   "token": {
@@ -84,6 +87,8 @@ func handleCreateToken(t *testing.T, w http.ResponseWriter, r *http.Request) {
 func handleGetToken(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
 	t.Helper()
 
+	th.TestMethod(t, r, "GET")
+
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, `
 {
@@ -96,10 +101,48 @@ func handleGetToken(t *testing.T, w http.ResponseWriter, r *http.Request, userID
 `, userID)
 }
 
+func handleDeleteToken(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+
+	th.TestMethod(t, r, "DELETE")
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Content-Type", "application/json")
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "POST")
+
+	w.WriteHeader(http.StatusCreated)
+	_, _ = fmt.Fprintf(w, `
+{
+    "user": {
+        "default_project_id": "project",
+        "description": "James Doe user",
+        "domain_id": "domain",
+        "email": "jdoe@example.com",
+        "enabled": true,
+        "id": "%[1]s",
+        "links": {
+            "self": "https://example.com/identity/v3/users/%[1]s"
+        },
+        "name": "James Doe",
+        "password_expires_at": "2016-11-06T15:32:17.000000"
+    }
+}
+`, userID)
+}
+
 type EnabledMocks struct {
 	TokenPost      bool
 	TokenGet       bool
+	TokenDelete    bool
 	PasswordChange bool
+	UserPost       bool
+	UserDelete     bool
 }
 
 func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
@@ -118,6 +161,21 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 			if enabled.TokenGet {
 				handleGetToken(t, w, r, userID)
 			}
+		case "DELETE":
+			if enabled.TokenDelete {
+				handleDeleteToken(t, w, r)
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	})
+
+	th.Mux.HandleFunc("/v3/users", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST":
+			if enabled.UserPost {
+				handleCreateUser(t, w, r, userID)
+			}
 		default:
 			w.WriteHeader(404)
 		}
@@ -127,6 +185,16 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s/password", userID), func(w http.ResponseWriter, r *http.Request) {
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
+			th.TestMethod(t, r, "POST")
+
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
+
+	if enabled.UserDelete {
+		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
+			th.TestHeader(t, r, "Accept", "application/json")
+			th.TestMethod(t, r, "DELETE")
 
 			w.WriteHeader(http.StatusNoContent)
 		})
