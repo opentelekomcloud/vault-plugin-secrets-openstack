@@ -3,6 +3,14 @@ SHELL=/bin/bash
 export PATH:=/usr/local/go/bin:~/go/bin/:$(PATH)
 
 GOFMT_FILES?=$$(find . -name '*.go')
+WORKDIR =$(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+PROJECT =$(notdir $(WORKDIR))
+BUILT_DIR ="$(WORKDIR)/bin"
+BINARY_PATH="$(BUILT_DIR)/$(PROJECT)"
+
+build:
+	@mkdir -p $(BUILT_DIR)
+	@go build -o $(BINARY_PATH)
 
 release:
 	goreleaser release
@@ -24,3 +32,6 @@ fmt:
 
 lint:
 	golangci-lint run ./...
+
+functional: build
+	@VAULT_PLUGIN_DIR=$(BUILT_DIR) ./scripts/acceptance.sh
