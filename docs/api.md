@@ -21,7 +21,7 @@ will overwrite them.
 
 * `user_domain_name` `(string: <required>)` - Name of the domain of the root user.
 
-* `username` `(string: <required>)` - OpenStack username of the root user
+* `username` `(string: <required>)` - OpenStack username of the root user.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
@@ -51,9 +51,9 @@ $ curl \
 This endpoint allows you to read non-secure values that have been configured in the `config/:cloud` endpoint.
 In particular, the `password` parameter is never returned.
 
-| Method | Path                     |
-|:-------|:-------------------------|
-| GET    | /openstack/config/:cloud |
+| Method | Path                       |
+|:-------|:---------------------------|
+| `GET`  | `/openstack/config/:cloud` |
 
 ### Sample Request
 
@@ -73,6 +73,33 @@ $ curl \
 }
 ```
 
+## List Root Configurations
+
+This endpoint allows you to list configurations values that have been configured in the `configs` endpoint.
+
+| Method | Path                 |
+|:-------|:---------------------|
+| `LIST` | `/openstack/configs` |
+
+### Sample Request
+
+```shell
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST
+    http://127.0.0.1:8200/v1/openstack/configs
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": [ "sample-config-1", "sample-config-2"]  
+  }
+}
+```
+
 ## Rotate Root Credentials
 
 When you have configured Vault with static credentials, you can use this endpoint to have the Vault rotate the password
@@ -80,9 +107,9 @@ it used. Password change will be performed and new token will be returned.
 
 Once this method is called, Vault will now be the only entity that knows the password used to access OpenStack instance.
 
-| Method | Path                           |
-|:-------|:-------------------------------|
-| GET    | /openstack/rotate-root/:cloud  |
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `GET`  | `/openstack/rotate-root/:cloud` |
 
 ### Sample Request
 
@@ -98,9 +125,9 @@ $ curl \
 This endpoint creates or updates the role with the given `name`. If a role with the name does not exist, it will be
 created. If the role exists, it will be updated with the new attributes.
 
-| Method  | Path                       |
-|:--------|:---------------------------|
-| `POST`  | `/openstack/roles/:name`   |
+| Method  | Path                    |
+|:--------|:------------------------|
+| `POST`  | `/openstack/role/:name` |
 
 ### Parameters
 
@@ -143,7 +170,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/roles/example-role
+    http://127.0.0.1:8200/v1/openstack/role/example-role
 ```
 
 ### Sample Payload
@@ -223,9 +250,9 @@ or
 
 This endpoint queries an existing role by the given name. If the role does not exist, a 404 is returned.
 
-| Method   | Path                     |
-|:---------|:-------------------------|
-| `GET`    | `/openstack/roles/:name` |
+| Method   | Path                    |
+|:---------|:------------------------|
+| `GET`    | `/openstack/role/:name` |
 
 
 ### Parameters
@@ -237,7 +264,54 @@ This endpoint queries an existing role by the given name. If the role does not e
 ```shell
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/roles/example-role
+    http://127.0.0.1:8200/v1/openstack/role/example-role
+```
+
+### Sample Response
+
+```json
+{
+  "cloud": "example-cloud",
+  "root": false,
+  "secret_type": "password",
+  "project_name": "test",
+  "user_groups": [
+    "default",
+    "testing"
+  ],
+  "ttl": "1h30m"
+}
+```
+
+## List Roles
+
+This endpoint queries an existing role by the given name. If the role does not exist, a 404 is returned.
+
+| Method | Path               |
+|:-------|:-------------------|
+| `LIST` | `/openstack/roles` |
+
+
+### Parameters
+
+- `cloud` `(string: <optional>)` – Specifies the name of the role to read. This is part of the request URL.
+
+### Sample Request
+
+```shell
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST
+    --data @payload.json
+    http://127.0.0.1:8200/v1/openstack/roles
+```
+
+### Sample Payload
+
+```json
+{
+  "cloud": "default-cloud"
+}
 ```
 
 ### Sample Response
