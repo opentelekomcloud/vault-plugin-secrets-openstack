@@ -95,7 +95,7 @@ $ curl \
 ```json
 {
   "data": {
-    "keys": [ "sample-config-1", "sample-config-2"]  
+    "keys": ["sample-config-1", "sample-config-2"]  
   }
 }
 ```
@@ -318,15 +318,9 @@ $ curl \
 
 ```json
 {
-  "cloud": "example-cloud",
-  "root": false,
-  "secret_type": "password",
-  "project_name": "test",
-  "user_groups": [
-    "default",
-    "testing"
-  ],
-  "ttl": "1h30m"
+  "data": {
+    "keys": ["default-cloud-role-1", "default-cloud-role-2"]
+  }
 }
 ```
 
