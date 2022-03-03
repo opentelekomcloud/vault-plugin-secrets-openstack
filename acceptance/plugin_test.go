@@ -1,3 +1,6 @@
+//go:build acceptance
+// +build acceptance
+
 package acceptance
 
 import (
@@ -164,4 +167,20 @@ func (p *PluginTest) vaultDo(method, endpoint string, body map[string]interface{
 	}
 	req.Header.Set("X-Vault-Token", p.vaultConfig.Token)
 	return http.DefaultClient.Do(req)
+}
+
+func listResponseKeys(t *testing.T, r *http.Response) []string {
+	t.Helper()
+	res, err := jsonToMap(readJSONResponse(r))
+	require.NoError(t, err)
+
+	data, ok := res["data"].(map[string]interface{})
+	require.True(t, ok)
+	keys, ok := data["keys"].([]interface{})
+	require.True(t, ok)
+	keysStr := make([]string, len(keys))
+	for i, v := range keys {
+		keysStr[i] = v.(string)
+	}
+	return keysStr
 }

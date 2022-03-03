@@ -1,3 +1,6 @@
+//go:build acceptance
+// +build acceptance
+
 package acceptance
 
 import (
@@ -49,7 +52,7 @@ func (p *PluginTest) TestCloudLifecycle() {
 		resp, err := p.vaultDo("LIST", cloudsListURL, nil)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		names := extractCloudNames(t, readJSONResponse(resp))
+		names := listResponseKeys(t, resp)
 		require.Len(t, names, 1)
 		assert.Equal(t, cloudName, names[0])
 	})
@@ -79,20 +82,4 @@ var cloudsListURL = "/v1/openstack/clouds"
 
 func cloudURL(name string) string {
 	return fmt.Sprintf("/v1/openstack/cloud/%s", name)
-}
-
-func extractCloudNames(t *testing.T, jsonResponse string) []string {
-	t.Helper()
-	res, err := jsonToMap(jsonResponse)
-	require.NoError(t, err)
-
-	data, ok := res["data"].(map[string]interface{})
-	require.True(t, ok)
-	keys, ok := data["keys"].([]interface{})
-	require.True(t, ok)
-	keysStr := make([]string, len(keys))
-	for i, v := range keys {
-		keysStr[i] = v.(string)
-	}
-	return keysStr
 }
