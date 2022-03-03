@@ -76,11 +76,6 @@ func readJSONResponse(r *http.Response) string {
 	return data
 }
 
-func logJSONResponse(t *testing.T, r *http.Response) {
-	t.Helper()
-	t.Log(readJSONResponse(r))
-}
-
 func (p *PluginTest) registerPlugin() {
 	t := p.T()
 	t.Helper()
@@ -95,7 +90,7 @@ func (p *PluginTest) registerPlugin() {
 		"command": pluginBin,
 	})
 	require.NoError(t, err)
-	logJSONResponse(t, resp)
+	require.Equal(t, resp.StatusCode, http.StatusNoContent)
 }
 
 func (p *PluginTest) unregisterPlugin() {
@@ -104,7 +99,7 @@ func (p *PluginTest) unregisterPlugin() {
 
 	resp, err := p.vaultDo(http.MethodDelete, pluginCatalogEndpoint, nil)
 	require.NoError(t, err)
-	logJSONResponse(t, resp)
+	require.Equal(t, resp.StatusCode, http.StatusNoContent)
 }
 
 func (p *PluginTest) mountPlugin() {
