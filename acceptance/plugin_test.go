@@ -171,11 +171,7 @@ func (p *PluginTest) vaultDo(method, endpoint string, body map[string]interface{
 
 func listResponseKeys(t *testing.T, r *http.Response) []string {
 	t.Helper()
-	res, err := jsonToMap(readJSONResponse(r))
-	require.NoError(t, err)
-
-	data, ok := res["data"].(map[string]interface{})
-	require.True(t, ok)
+	data := getResponseData(t, r)
 	keys, ok := data["keys"].([]interface{})
 	require.True(t, ok)
 	keysStr := make([]string, len(keys))
@@ -183,4 +179,14 @@ func listResponseKeys(t *testing.T, r *http.Response) []string {
 		keysStr[i] = v.(string)
 	}
 	return keysStr
+}
+
+func getResponseData(t *testing.T, r *http.Response) map[string]interface{} {
+	t.Helper()
+	res, err := jsonToMap(readJSONResponse(r))
+	require.NoError(t, err)
+
+	data, ok := res["data"].(map[string]interface{})
+	require.True(t, ok)
+	return data
 }
