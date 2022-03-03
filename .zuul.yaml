@@ -11,15 +11,11 @@
         - golang-make-test
         - goreleaser-build:
             nodeset: fedora-32-large
-    check-post:
-      jobs:
-        - golang-make-functional-identity
     gate:
       jobs:
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
-        - golang-make-functional-identity
         - goreleaser-build:
             nodeset: fedora-32-large
     tag:
