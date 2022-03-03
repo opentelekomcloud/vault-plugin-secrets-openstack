@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,8 +19,8 @@ func (p *PluginTest) TestCloudLifecycle() {
 
 	cloudData := map[string]interface{}{
 		"auth_url":         "https://example.com/v3/",
-		"username":         "admin",
-		"password":         "RcigTiYrJjVmEkrV71Cd",
+		"username":         tools.RandomString("us", 4),
+		"password":         tools.RandomString("", 15),
 		"user_domain_name": "Default",
 	}
 	cloudName := "test-write"
