@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -67,16 +66,6 @@ func (p *PluginTest) TestCloudLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
-}
-
-func jsonToMap(src string) (map[string]interface{}, error) {
-	var result map[string]interface{}
-	err := jsonutil.DecodeJSON([]byte(src), &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, err
 }
 
 var cloudsListURL = "/v1/openstack/clouds"

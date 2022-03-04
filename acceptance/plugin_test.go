@@ -16,6 +16,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -186,7 +187,19 @@ func getResponseData(t *testing.T, r *http.Response) map[string]interface{} {
 	res, err := jsonToMap(readJSONResponse(r))
 	require.NoError(t, err)
 
-	data, ok := res["data"].(map[string]interface{})
-	require.True(t, ok)
-	return data
+	data, ok := res["data"]
+	require.True(t, ok, "response has no data: %+v", res)
+	dataMap, ok := data.(map[string]interface{})
+	require.True(t, ok, "response data is not a map: %+v", data)
+	return dataMap
+}
+
+func jsonToMap(src string) (map[string]interface{}, error) {
+	var result map[string]interface{}
+	err := jsonutil.DecodeJSON([]byte(src), &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, err
 }
