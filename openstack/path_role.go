@@ -135,7 +135,7 @@ const (
 	SecretToken    secretType = "token"
 )
 
-type RoleEntry struct {
+type roleEntry struct {
 	Name        string            `json:"name"`
 	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
@@ -151,12 +151,12 @@ func roleStoragePath(name string) string {
 	return fmt.Sprintf("%s/%s", rolesStoragePath, name)
 }
 
-func getRole(ctx context.Context, d *framework.FieldData, s logical.Storage) (*RoleEntry, error) {
+func getRole(ctx context.Context, d *framework.FieldData, s logical.Storage) (*roleEntry, error) {
 	name := d.Get("name").(string)
 	return getRoleByName(ctx, name, s)
 }
 
-func saveRole(ctx context.Context, e *RoleEntry, s logical.Storage) error {
+func saveRole(ctx context.Context, e *roleEntry, s logical.Storage) error {
 	storageEntry, err := logical.StorageEntryJSON(roleStoragePath(e.Name), e)
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ func saveRole(ctx context.Context, e *RoleEntry, s logical.Storage) error {
 	return s.Put(ctx, storageEntry)
 }
 
-func getRoleByName(ctx context.Context, name string, s logical.Storage) (*RoleEntry, error) {
+func getRoleByName(ctx context.Context, name string, s logical.Storage) (*roleEntry, error) {
 	entry, err := s.Get(ctx, roleStoragePath(name))
 	if err != nil {
 		return nil, err
@@ -174,14 +174,14 @@ func getRoleByName(ctx context.Context, name string, s logical.Storage) (*RoleEn
 		return nil, nil
 	}
 
-	role := new(RoleEntry)
+	role := new(roleEntry)
 	if err := entry.DecodeJSON(role); err != nil {
 		return nil, err
 	}
 	return role, nil
 }
 
-func roleToMap(src *RoleEntry) map[string]interface{} {
+func roleToMap(src *roleEntry) map[string]interface{} {
 	return map[string]interface{}{
 		"cloud":        src.Cloud,
 		"root":         src.Root,
@@ -220,7 +220,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		if req.Operation == logical.UpdateOperation {
 			return logical.ErrorResponse("role `%s` not found during update operation", name), nil
 		}
-		entry = &RoleEntry{Name: name}
+		entry = &roleEntry{Name: name}
 	}
 
 	if cloud, ok := d.GetOk("cloud"); ok {

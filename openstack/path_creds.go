@@ -80,7 +80,7 @@ func (b *backend) pathCreds() *framework.Path {
 	}
 }
 
-func getRootCredentials(client *gophercloud.ServiceClient, role *RoleEntry, config *OsCloud) (*logical.Response, error) {
+func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	if role.SecretType != "token" {
 		return nil, errRootNotToken
 	}
@@ -117,7 +117,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *RoleEntry, conf
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getTmpUserCredentials(client *gophercloud.ServiceClient, role *RoleEntry, config *OsCloud) (*logical.Response, error) {
+func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	password := randomString(pwdDefaultSet, 6)
 	user, err := createUser(client, password)
 	if err != nil {

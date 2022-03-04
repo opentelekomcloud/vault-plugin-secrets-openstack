@@ -293,7 +293,7 @@ func TestRoleCreate(t *testing.T) {
 
 	id, _ := uuid.GenerateUUID()
 	t.Run("ok", func(t *testing.T) {
-		cases := map[string]*RoleEntry{
+		cases := map[string]*roleEntry{
 			"admin": {
 				Name:  randomRoleName(),
 				Cloud: randomRoleName(),
@@ -353,7 +353,7 @@ func TestRoleCreate(t *testing.T) {
 				entry, err := s.Get(context.Background(), roleStoragePath(roleName))
 				require.NoError(t, err)
 				require.NotEmpty(t, entry)
-				role := new(RoleEntry)
+				role := new(roleEntry)
 				assert.NoError(t, entry.DecodeJSON(role))
 
 				fillRoleDefaultFields(b, data) // otherwise there will be false positives
@@ -364,14 +364,14 @@ func TestRoleCreate(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		type errRoleEntry struct {
-			*RoleEntry
+			*roleEntry
 			errorRegex *regexp.Regexp
 		}
 
 		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
 			"root-ttl": {
-				RoleEntry: &RoleEntry{
+				roleEntry: &roleEntry{
 					Cloud: randomRoleName(),
 					Root:  true,
 					TTL:   1 * time.Hour,
@@ -379,7 +379,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"root-password": {
-				RoleEntry: &RoleEntry{
+				roleEntry: &roleEntry{
 					Cloud:      randomRoleName(),
 					Root:       true,
 					SecretType: SecretPassword,
@@ -387,7 +387,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"root-user-groups": {
-				RoleEntry: &RoleEntry{
+				roleEntry: &roleEntry{
 					Cloud:      randomRoleName(),
 					Root:       true,
 					UserGroups: []string{"ug-1"},
@@ -395,7 +395,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"without-cloud": {
-				RoleEntry:  &RoleEntry{},
+				roleEntry:  &roleEntry{},
 				errorRegex: regexp.MustCompile(`cloud is required when creating a role`),
 			},
 		}
@@ -407,7 +407,7 @@ func TestRoleCreate(t *testing.T) {
 				b, s := testBackend(t)
 
 				roleName := randomRoleName()
-				inputRole := fixtures.SanitizedMap(roleToMap(data.RoleEntry))
+				inputRole := fixtures.SanitizedMap(roleToMap(data.roleEntry))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.CreateOperation,
@@ -423,7 +423,7 @@ func TestRoleCreate(t *testing.T) {
 	})
 
 	t.Run("store-err", func(t *testing.T) {
-		data := &RoleEntry{
+		data := &roleEntry{
 			Cloud:       randomRoleName(),
 			ProjectName: randomRoleName(),
 			SecretType:  SecretToken,
@@ -462,7 +462,7 @@ func TestRoleUpdate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
 		_, exp := expectedRoleData()
-		exp2 := &RoleEntry{
+		exp2 := &roleEntry{
 			ProjectID:   "",
 			ProjectName: tools.RandomString("p", 5),
 		}
@@ -494,7 +494,7 @@ func TestRoleUpdate(t *testing.T) {
 	})
 }
 
-func fillRoleDefaultFields(b *backend, entry *RoleEntry) {
+func fillRoleDefaultFields(b *backend, entry *roleEntry) {
 	pr := b.pathRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
