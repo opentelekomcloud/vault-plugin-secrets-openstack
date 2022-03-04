@@ -45,7 +45,7 @@ func TestRoleGet(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := fixtures.ExpectedRoleData()
+		_, expectedMap := expectedRoleData()
 
 		saveRawRole(t, roleName, expectedMap, s)
 
@@ -96,7 +96,7 @@ func TestRoleExistence(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, exp := fixtures.ExpectedRoleData()
+		_, exp := expectedRoleData()
 		saveRawRole(t, roleName, exp, s)
 
 		req := &logical.Request{Storage: s}
@@ -152,7 +152,7 @@ func TestRoleList(t *testing.T) {
 		for i := 0; i < roleCount; i++ {
 			name := randomRoleName()
 			roleNames[i] = name
-			_, exp := fixtures.ExpectedRoleData()
+			_, exp := expectedRoleData()
 			saveRawRole(t, name, exp, s)
 		}
 
@@ -184,10 +184,10 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t)
 		name1 := randomRoleName()
-		expRole1, expMap1 := fixtures.ExpectedRoleData()
+		expRole1, expMap1 := expectedRoleData()
 		saveRawRole(t, name1, expMap1, s)
 		name2 := randomRoleName()
-		_, expMap2 := fixtures.ExpectedRoleData()
+		_, expMap2 := expectedRoleData()
 		saveRawRole(t, name2, expMap2, s)
 
 		lst, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -207,7 +207,7 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t, failVerbRead)
 		name1 := randomRoleName()
-		expRole1, expMap1 := fixtures.ExpectedRoleData()
+		expRole1, expMap1 := expectedRoleData()
 		saveRawRole(t, name1, expMap1, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -230,7 +230,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := fixtures.ExpectedRoleData()
+		_, expectedMap := expectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -260,7 +260,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbDelete)
 
 		roleName := randomRoleName()
-		_, expectedMap := fixtures.ExpectedRoleData()
+		_, expectedMap := expectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -276,7 +276,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbRead)
 
 		roleName := randomRoleName()
-		_, expectedMap := fixtures.ExpectedRoleData()
+		_, expectedMap := expectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -461,7 +461,7 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := fixtures.ExpectedRoleData()
+		_, exp := expectedRoleData()
 		exp2 := &RoleEntry{
 			ProjectID:   "",
 			ProjectName: tools.RandomString("p", 5),
@@ -480,7 +480,7 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("not-existing", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := fixtures.ExpectedRoleData()
+		_, exp := expectedRoleData()
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
@@ -506,4 +506,24 @@ func fillRoleDefaultFields(b *backend, entry *RoleEntry) {
 		}
 	}
 	entry.TTL /= time.Second
+}
+
+func expectedRoleData() (*roleEntry, map[string]interface{}) {
+	expTTL := time.Hour
+	expected := &roleEntry{
+		Cloud:       tools.RandomString("cl", 5),
+		TTL:         expTTL / time.Second,
+		ProjectName: tools.RandomString("p", 5),
+	}
+	expectedMap := map[string]interface{}{
+		"cloud":        expected.Cloud,
+		"ttl":          expTTL,
+		"project_id":   "",
+		"project_name": expected.ProjectName,
+		"extensions":   map[string]string{},
+		"root":         false,
+		"secret_type":  "token",
+		"user_groups":  []string{},
+	}
+	return expected, expectedMap
 }

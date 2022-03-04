@@ -2,16 +2,12 @@ package fixtures
 
 import (
 	"fmt"
-
 	"net/http"
 	"reflect"
 	"testing"
-	"time"
 
-	"github.com/gophercloud/gophercloud/acceptance/tools"
 	th "github.com/gophercloud/gophercloud/testhelper"
 	"github.com/gophercloud/gophercloud/testhelper/client"
-	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 )
 
 // isEmpty gets whether the specified object is considered empty or not.
@@ -203,24 +199,4 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 			w.WriteHeader(http.StatusNoContent)
 		})
 	}
-}
-
-func ExpectedRoleData() (*openstack.RoleEntry, map[string]interface{}) {
-	expTTL := time.Hour
-	expected := &openstack.RoleEntry{
-		Cloud:       tools.RandomString("cl", 5),
-		TTL:         expTTL / time.Second,
-		ProjectName: tools.RandomString("p", 5),
-	}
-	expectedMap := map[string]interface{}{
-		"cloud":        expected.Cloud,
-		"ttl":          expTTL,
-		"project_id":   "",
-		"project_name": expected.ProjectName,
-		"extensions":   map[string]string{},
-		"root":         false,
-		"secret_type":  "token",
-		"user_groups":  []string{},
-	}
-	return expected, expectedMap
 }
