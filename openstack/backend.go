@@ -2,6 +2,7 @@ package openstack
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
@@ -89,6 +90,9 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 	cloud, err := c.getCloudConfig(ctx, s)
 	if err != nil {
 		return err
+	}
+	if cloud == nil { // this happened at least once during acceptance test
+		return fmt.Errorf("no cloud found with name %s", c.name)
 	}
 
 	clientOpts := &clientconfig.ClientOpts{
