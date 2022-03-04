@@ -237,9 +237,9 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 
 	if !entry.Root {
 		if ttl, ok := d.GetOk("ttl"); ok {
-			entry.TTL = time.Duration(ttl.(int)) * time.Second
+			entry.TTL = time.Duration(ttl.(int))
 		} else if req.Operation == logical.CreateOperation {
-			entry.TTL = time.Hour
+			entry.TTL = time.Hour / time.Second
 		}
 	} else {
 		if _, ok := d.GetOk("ttl"); ok {
