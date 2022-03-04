@@ -16,7 +16,9 @@ import (
 	"path"
 	"testing"
 
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -29,6 +31,8 @@ const (
 var (
 	pluginCatalogEndpoint = fmt.Sprintf("/v1/sys/plugins/catalog/secret/%s", pluginAlias)
 	pluginMountEndpoint   = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
+
+	cloudBaseEndpoint = fmt.Sprintf("/v1/%s/cloud", pluginAlias)
 )
 
 type vaultCfg struct {
@@ -186,4 +190,76 @@ func listResponseKeys(t *testing.T, r *http.Response) []string {
 	var out = keyListData{}
 	require.NoError(t, jsonutil.DecodeJSON([]byte(raw), &out))
 	return out.Data.Keys
+}
+
+func openstackCloudConfig(t *testing.T) *openstack.OsCloud {
+	t.Helper()
+
+	cloudConfig := os.Getenv("OS_CLIENT_CONFIG_FILE")
+	cloudName := os.Getenv("OS_CLOUD")
+
+	if cloudConfig == "" || cloudName == "" {
+		t.Fatal("Both OS_CLIENT_CONFIG_FILE and OS_CLOUD needs to be set for the tests")
+	}
+
+	clientOpts := &clientconfig.ClientOpts{Cloud: cloudName}
+
+	cloud, err := clientconfig.GetCloudFromYAML(clientOpts)
+	require.NoError(t, err)
+
+	return &openstack.OsCloud{
+		Name:           cloudName,
+		AuthURL:        cloud.AuthInfo.AuthURL,
+		UserDomainName: getDomainName(cloud.AuthInfo),
+		Username:       cloud.AuthInfo.Username,
+		Password:       cloud.AuthInfo.Password,
+	}
+}
+
+func getDomainName(authInfo *clientconfig.AuthInfo) string {
+	for _, name := range []string{
+		authInfo.UserDomainName,
+		authInfo.DomainName,
+		authInfo.ProjectDomainName,
+	} {
+		if name != "" {
+			return name
+		}
+	}
+	return ""
+}
+
+func cloudEndpoint(name string) string {
+	return fmt.Sprintf("%s/%s", cloudBaseEndpoint, name)
+}
+
+func (p *PluginTest) prepareCloud() *openstack.OsCloud {
+	t := p.T()
+	t.Helper()
+
+	cloud := openstackCloudConfig(t)
+	r, err := p.vaultDo(
+		http.MethodPost,
+		cloudEndpoint(cloud.Name),
+		map[string]interface{}{
+			"auth_url":         cloud.AuthURL,
+			"username":         cloud.Username,
+			"password":         cloud.Password,
+			"user_domain_name": cloud.UserDomainName,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, r.StatusCode)
+
+	t.Cleanup(func() { // remove cloud after each test
+		r, err := p.vaultDo(
+			http.MethodDelete,
+			cloudEndpoint(cloud.Name),
+			nil,
+		)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, r.StatusCode)
+	})
+
+	return cloud
 }
