@@ -6,6 +6,7 @@ package acceptance
 import (
 	"fmt"
 	"github.com/gophercloud/gophercloud/acceptance/tools"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"net/http"
 	"testing"
 	"time"
@@ -14,20 +15,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type roleData struct {
+	Cloud       string                 `json:"cloud"`
+	Ttl         time.Duration          `json:"ttl"`
+	ProjectID   string                 `json:"project_id"`
+	ProjectName string                 `json:"project_name"`
+	Extensions  map[string]interface{} `json:"extensions"`
+	Root        bool                   `json:"root"`
+	SecretType  string                 `json:"secret_type"`
+	UserGroups  []interface{}          `json:"user_groups"`
+}
+
+func extractRoleData(t *testing.T, resp *http.Response) *roleData {
+	t.Helper()
+
+	raw := readJSONResponse(t, resp)
+	var out struct {
+		Data *roleData `json:"data"`
+	}
+	require.NoError(t, jsonutil.DecodeJSON([]byte(raw), &out))
+	return out.Data
+}
+
 func (p *PluginTest) TestRoleLifecycle() {
 	t := p.T()
 
-	roleMap := expectedRoleData()
+	data := expectedRoleData()
 	roleName := "test-write"
 
 	t.Run("WriteRole", func(t *testing.T) {
 		resp, err := p.vaultDo(
 			http.MethodPost,
 			roleURL(roleName),
-			roleMap,
+			data,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(resp))
+		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
 	})
 
 	t.Run("ReadRole", func(t *testing.T) {
@@ -39,13 +62,21 @@ func (p *PluginTest) TestRoleLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		json, err := jsonToMap(readJSONResponse(resp))
-		require.NoError(t, err)
-		assert.Equal(t, roleMap, json["data"])
+		expected := &roleData{
+			Cloud:       data["cloud"].(string),
+			Ttl:         data["ttl"].(time.Duration),
+			ProjectID:   data["project_id"].(string),
+			ProjectName: data["project_name"].(string),
+			Extensions:  data["extensions"].(map[string]interface{}),
+			Root:        data["root"].(bool),
+			SecretType:  data["secret_type"].(string),
+			UserGroups:  data["user_groups"].([]interface{}),
+		}
+		assert.Equal(t, expected, extractRoleData(t, resp))
 	})
 
 	t.Run("ListRoles", func(t *testing.T) {
-		resp, err := p.vaultDo("LIST", roleListURL, nil)
+		resp, err := p.vaultDo("LIST", "/v1/openstack/roles", nil)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		names := listResponseKeys(t, resp)
@@ -63,8 +94,6 @@ func (p *PluginTest) TestRoleLifecycle() {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
-
-var roleListURL = "/v1/openstack/roles"
 
 func roleURL(name string) string {
 	return fmt.Sprintf("/v1/openstack/role/%s", name)
