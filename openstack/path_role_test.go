@@ -40,7 +40,7 @@ func expectedRoleData() (*roleEntry, map[string]interface{}) {
 	}
 	expectedMap := map[string]interface{}{
 		"cloud":        expected.Cloud,
-		"ttl":          expTTL / time.Second,
+		"ttl":          expTTL,
 		"project_id":   "",
 		"project_name": expected.ProjectName,
 		"extensions":   map[string]string{},
@@ -525,4 +525,5 @@ func fillRoleDefaultFields(b *backend, entry *roleEntry) {
 			entry.TTL = time.Hour
 		}
 	}
+	entry.TTL /= time.Second
 }
