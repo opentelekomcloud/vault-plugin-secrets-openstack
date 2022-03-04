@@ -16,9 +16,12 @@ import (
 	"path"
 	"testing"
 
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -101,7 +104,7 @@ func (p *PluginTest) registerPlugin() {
 		"command": pluginBin,
 	})
 	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, http.StatusNoContent)
+	requireStatusCode(t, http.StatusNoContent, resp)
 }
 
 func (p *PluginTest) unregisterPlugin() {
@@ -110,7 +113,7 @@ func (p *PluginTest) unregisterPlugin() {
 
 	resp, err := p.vaultDo(http.MethodDelete, pluginCatalogEndpoint, nil)
 	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, http.StatusNoContent)
+	requireStatusCode(t, http.StatusNoContent, resp)
 }
 
 func (p *PluginTest) mountPlugin() {
@@ -192,11 +195,40 @@ func listResponseKeys(t *testing.T, r *http.Response) []string {
 	return out.Data.Keys
 }
 
+var (
+	cloudConfig = os.Getenv("OS_CLIENT_CONFIG_FILE")
+	cloudName   = os.Getenv("OS_CLOUD")
+)
+
+type AuxiliaryData struct {
+	UserID    string
+	DomainID  string
+	ProjectID string
+}
+
+func openstackClient(t *testing.T) (*gophercloud.ServiceClient, *AuxiliaryData) {
+	t.Helper()
+	opts := &clientconfig.ClientOpts{Cloud: cloudName}
+	client, err := clientconfig.NewServiceClient("identity", opts)
+	require.NoError(t, err)
+
+	token := tokens.Get(client, client.Token())
+	require.NoError(t, token.Err)
+	project, err := token.ExtractProject()
+	require.NoError(t, err)
+	user, err := token.ExtractUser()
+	require.NoError(t, err)
+
+	aux := &AuxiliaryData{
+		UserID:    user.ID,
+		DomainID:  user.Domain.ID,
+		ProjectID: project.ID,
+	}
+	return client, aux
+}
+
 func openstackCloudConfig(t *testing.T) *openstack.OsCloud {
 	t.Helper()
-
-	cloudConfig := os.Getenv("OS_CLIENT_CONFIG_FILE")
-	cloudName := os.Getenv("OS_CLOUD")
 
 	if cloudConfig == "" || cloudName == "" {
 		t.Fatal("Both OS_CLIENT_CONFIG_FILE and OS_CLOUD needs to be set for the tests")
@@ -233,11 +265,23 @@ func cloudEndpoint(name string) string {
 	return fmt.Sprintf("%s/%s", cloudBaseEndpoint, name)
 }
 
-func (p *PluginTest) prepareCloud() *openstack.OsCloud {
+func assertStatusCode(t *testing.T, expected int, r *http.Response) bool {
+	t.Helper()
+	return assert.Equal(t, expected, r.StatusCode, readJSONResponse(t, r))
+}
+
+func requireStatusCode(t *testing.T, expected int, r *http.Response) {
+	t.Helper()
+	if assertStatusCode(t, expected, r) {
+		return
+	}
+	t.FailNow()
+}
+
+func (p *PluginTest) makeCloud(cloud *openstack.OsCloud) {
 	t := p.T()
 	t.Helper()
 
-	cloud := openstackCloudConfig(t)
 	r, err := p.vaultDo(
 		http.MethodPost,
 		cloudEndpoint(cloud.Name),
@@ -249,17 +293,17 @@ func (p *PluginTest) prepareCloud() *openstack.OsCloud {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, r.StatusCode)
+	requireStatusCode(t, http.StatusNoContent, r)
+	t.Logf("Cloud with name `%s` was created", cloud.Name)
 
-	t.Cleanup(func() { // remove cloud after each test
+	t.Cleanup(func() {
 		r, err := p.vaultDo(
 			http.MethodDelete,
 			cloudEndpoint(cloud.Name),
 			nil,
 		)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusNoContent, r.StatusCode)
+		requireStatusCode(t, http.StatusNoContent, r)
+		t.Logf("Cloud with name `%s` has been removed", cloud.Name)
 	})
-
-	return cloud
 }
