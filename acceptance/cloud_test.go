@@ -14,10 +14,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type cloudData struct {
+	AuthURL        string `json:"auth_url"`
+	UserDomainName string `json:"user_domain_name"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+}
+
+func extractCloudData(t *testing.T, resp *http.Response) *cloudData {
+	t.Helper()
+
+	raw := readJSONResponse(t, resp)
+	var out struct {
+		Data *cloudData `json:"data"`
+	}
+	require.NoError(t, jsonutil.DecodeJSON([]byte(raw), &out))
+	return out.Data
+}
+
 func (p *PluginTest) TestCloudLifecycle() {
 	t := p.T()
 
-	cloudData := map[string]interface{}{
+	data := map[string]interface{}{
 		"auth_url":         "https://example.com/v3/",
 		"username":         tools.RandomString("us", 4),
 		"password":         tools.RandomString("", 15),
@@ -29,10 +47,10 @@ func (p *PluginTest) TestCloudLifecycle() {
 		resp, err := p.vaultDo(
 			http.MethodPost,
 			cloudURL(cloudName),
-			cloudData,
+			data,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(resp))
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 	})
 
 	t.Run("ReadCloud", func(t *testing.T) {
@@ -44,9 +62,13 @@ func (p *PluginTest) TestCloudLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		json, err := jsonToMap(readJSONResponse(resp))
-		require.NoError(t, err)
-		assert.Equal(t, cloudData, json["data"])
+		expected := &cloudData{
+			AuthURL:        data["auth_url"].(string),
+			UserDomainName: data["user_domain_name"].(string),
+			Username:       data["username"].(string),
+			Password:       data["password"].(string),
+		}
+		assert.Equal(t, expected, extractCloudData(t, resp))
 	})
 
 	t.Run("ListClouds", func(t *testing.T) {
@@ -67,16 +89,6 @@ func (p *PluginTest) TestCloudLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
-}
-
-func jsonToMap(src string) (map[string]interface{}, error) {
-	var result map[string]interface{}
-	err := jsonutil.DecodeJSON([]byte(src), &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, err
 }
 
 var cloudsListURL = "/v1/openstack/clouds"

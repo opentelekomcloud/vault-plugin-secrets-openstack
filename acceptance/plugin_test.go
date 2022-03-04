@@ -16,6 +16,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -59,20 +60,23 @@ func (p *PluginTest) TearDownSuite() {
 	p.unmountPlugin()
 }
 
-func readJSONResponse(r *http.Response) string {
+func readJSONResponse(t *testing.T, r *http.Response) string {
+	t.Helper()
+
 	defer func() {
-		_ = r.Body.Close()
+		t.Helper()
+		require.NoError(t, r.Body.Close())
 	}()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		panic(err)
+		require.NoError(t, err)
 	}
 
 	var data string
 	if len(body) > 0 {
 		dst := &bytes.Buffer{}
 		if err := json.Indent(dst, body, "", "  "); err != nil {
-			panic(err)
+			require.NoError(t, err)
 		}
 		data = dst.String()
 	}
@@ -114,7 +118,7 @@ func (p *PluginTest) mountPlugin() {
 		"description": "Test OpenStack plugin",
 	})
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(resp))
+	require.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 }
 
 func (p *PluginTest) unmountPlugin() {
@@ -123,7 +127,7 @@ func (p *PluginTest) unmountPlugin() {
 
 	resp, err := p.vaultDo(http.MethodDelete, pluginMountEndpoint, nil)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(resp))
+	require.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 }
 
 func fileSHA256(t *testing.T, path string) string {
@@ -169,24 +173,17 @@ func (p *PluginTest) vaultDo(method, endpoint string, body map[string]interface{
 	return http.DefaultClient.Do(req)
 }
 
-func listResponseKeys(t *testing.T, r *http.Response) []string {
-	t.Helper()
-	data := getResponseData(t, r)
-	keys, ok := data["keys"].([]interface{})
-	require.True(t, ok)
-	keysStr := make([]string, len(keys))
-	for i, v := range keys {
-		keysStr[i] = v.(string)
-	}
-	return keysStr
+type keyListData struct {
+	Data struct {
+		Keys []string `json:"keys"`
+	} `json:"data"`
 }
 
-func getResponseData(t *testing.T, r *http.Response) map[string]interface{} {
+func listResponseKeys(t *testing.T, r *http.Response) []string {
 	t.Helper()
-	res, err := jsonToMap(readJSONResponse(r))
-	require.NoError(t, err)
 
-	data, ok := res["data"].(map[string]interface{})
-	require.True(t, ok)
-	return data
+	raw := readJSONResponse(t, r)
+	var out = keyListData{}
+	require.NoError(t, jsonutil.DecodeJSON([]byte(raw), &out))
+	return out.Data.Keys
 }
