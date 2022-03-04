@@ -31,6 +31,26 @@ func randomRoleName() string {
 	return tools.RandomString("k", 5) + "m"
 }
 
+func expectedRoleData() (*roleEntry, map[string]interface{}) {
+	expTTL := time.Hour
+	expected := &roleEntry{
+		Cloud:       tools.RandomString("cl", 5),
+		TTL:         expTTL / time.Second,
+		ProjectName: tools.RandomString("p", 5),
+	}
+	expectedMap := map[string]interface{}{
+		"cloud":        expected.Cloud,
+		"ttl":          expTTL,
+		"project_id":   "",
+		"project_name": expected.ProjectName,
+		"extensions":   map[string]string{},
+		"root":         false,
+		"secret_type":  "token",
+		"user_groups":  []string{},
+	}
+	return expected, expectedMap
+}
+
 func saveRawRole(t *testing.T, name string, raw map[string]interface{}, s logical.Storage) {
 	storeEntry, err := logical.StorageEntryJSON(roleStoragePath(name), raw)
 	require.NoError(t, err)
@@ -506,24 +526,4 @@ func fillRoleDefaultFields(b *backend, entry *roleEntry) {
 		}
 	}
 	entry.TTL /= time.Second
-}
-
-func expectedRoleData() (*roleEntry, map[string]interface{}) {
-	expTTL := time.Hour
-	expected := &roleEntry{
-		Cloud:       tools.RandomString("cl", 5),
-		TTL:         expTTL / time.Second,
-		ProjectName: tools.RandomString("p", 5),
-	}
-	expectedMap := map[string]interface{}{
-		"cloud":        expected.Cloud,
-		"ttl":          expTTL,
-		"project_id":   "",
-		"project_name": expected.ProjectName,
-		"extensions":   map[string]string{},
-		"root":         false,
-		"secret_type":  "token",
-		"user_groups":  []string{},
-	}
-	return expected, expectedMap
 }
