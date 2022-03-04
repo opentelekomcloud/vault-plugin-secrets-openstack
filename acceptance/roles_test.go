@@ -5,19 +5,19 @@ package acceptance
 
 import (
 	"fmt"
-	"github.com/gophercloud/gophercloud/acceptance/tools"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type roleData struct {
 	Cloud       string                 `json:"cloud"`
-	Ttl         time.Duration          `json:"ttl"`
+	TTL         time.Duration          `json:"ttl"`
 	ProjectID   string                 `json:"project_id"`
 	ProjectName string                 `json:"project_name"`
 	Extensions  map[string]interface{} `json:"extensions"`
@@ -40,7 +40,7 @@ func extractRoleData(t *testing.T, resp *http.Response) *roleData {
 func (p *PluginTest) TestRoleLifecycle() {
 	t := p.T()
 
-	data := expectedRoleData()
+	_, data := fixtures.ExpectedRoleData()
 	roleName := "test-write"
 
 	t.Run("WriteRole", func(t *testing.T) {
@@ -64,7 +64,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 
 		expected := &roleData{
 			Cloud:       data["cloud"].(string),
-			Ttl:         data["ttl"].(time.Duration),
+			TTL:         data["ttl"].(time.Duration),
 			ProjectID:   data["project_id"].(string),
 			ProjectName: data["project_name"].(string),
 			Extensions:  data["extensions"].(map[string]interface{}),
@@ -97,18 +97,4 @@ func (p *PluginTest) TestRoleLifecycle() {
 
 func roleURL(name string) string {
 	return fmt.Sprintf("/v1/openstack/role/%s", name)
-}
-
-func expectedRoleData() map[string]interface{} {
-	expectedMap := map[string]interface{}{
-		"cloud":        tools.RandomString("cl", 5),
-		"ttl":          time.Hour / time.Second,
-		"project_id":   "",
-		"project_name": tools.RandomString("p", 5),
-		"extensions":   map[string]interface{}{},
-		"root":         false,
-		"secret_type":  "token",
-		"user_groups":  []interface{}{},
-	}
-	return expectedMap
 }

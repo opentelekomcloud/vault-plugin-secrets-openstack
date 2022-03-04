@@ -31,26 +31,6 @@ func randomRoleName() string {
 	return tools.RandomString("k", 5) + "m"
 }
 
-func expectedRoleData() (*roleEntry, map[string]interface{}) {
-	expTTL := time.Hour
-	expected := &roleEntry{
-		Cloud:       tools.RandomString("cl", 5),
-		TTL:         expTTL / time.Second,
-		ProjectName: tools.RandomString("p", 5),
-	}
-	expectedMap := map[string]interface{}{
-		"cloud":        expected.Cloud,
-		"ttl":          expTTL,
-		"project_id":   "",
-		"project_name": expected.ProjectName,
-		"extensions":   map[string]string{},
-		"root":         false,
-		"secret_type":  "token",
-		"user_groups":  []string{},
-	}
-	return expected, expectedMap
-}
-
 func saveRawRole(t *testing.T, name string, raw map[string]interface{}, s logical.Storage) {
 	storeEntry, err := logical.StorageEntryJSON(roleStoragePath(name), raw)
 	require.NoError(t, err)
@@ -65,7 +45,7 @@ func TestRoleGet(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := fixtures.ExpectedRoleData()
 
 		saveRawRole(t, roleName, expectedMap, s)
 
@@ -116,7 +96,7 @@ func TestRoleExistence(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
+		_, exp := fixtures.ExpectedRoleData()
 		saveRawRole(t, roleName, exp, s)
 
 		req := &logical.Request{Storage: s}
@@ -172,7 +152,7 @@ func TestRoleList(t *testing.T) {
 		for i := 0; i < roleCount; i++ {
 			name := randomRoleName()
 			roleNames[i] = name
-			_, exp := expectedRoleData()
+			_, exp := fixtures.ExpectedRoleData()
 			saveRawRole(t, name, exp, s)
 		}
 
@@ -204,10 +184,10 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData()
+		expRole1, expMap1 := fixtures.ExpectedRoleData()
 		saveRawRole(t, name1, expMap1, s)
 		name2 := randomRoleName()
-		_, expMap2 := expectedRoleData()
+		_, expMap2 := fixtures.ExpectedRoleData()
 		saveRawRole(t, name2, expMap2, s)
 
 		lst, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -227,7 +207,7 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t, failVerbRead)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData()
+		expRole1, expMap1 := fixtures.ExpectedRoleData()
 		saveRawRole(t, name1, expMap1, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -250,7 +230,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := fixtures.ExpectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -280,7 +260,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbDelete)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := fixtures.ExpectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -296,7 +276,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbRead)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := fixtures.ExpectedRoleData()
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -313,7 +293,7 @@ func TestRoleCreate(t *testing.T) {
 
 	id, _ := uuid.GenerateUUID()
 	t.Run("ok", func(t *testing.T) {
-		cases := map[string]*roleEntry{
+		cases := map[string]*RoleEntry{
 			"admin": {
 				Name:  randomRoleName(),
 				Cloud: randomRoleName(),
@@ -373,7 +353,7 @@ func TestRoleCreate(t *testing.T) {
 				entry, err := s.Get(context.Background(), roleStoragePath(roleName))
 				require.NoError(t, err)
 				require.NotEmpty(t, entry)
-				role := new(roleEntry)
+				role := new(RoleEntry)
 				assert.NoError(t, entry.DecodeJSON(role))
 
 				fillRoleDefaultFields(b, data) // otherwise there will be false positives
@@ -384,14 +364,14 @@ func TestRoleCreate(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		type errRoleEntry struct {
-			*roleEntry
+			*RoleEntry
 			errorRegex *regexp.Regexp
 		}
 
 		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
 			"root-ttl": {
-				roleEntry: &roleEntry{
+				RoleEntry: &RoleEntry{
 					Cloud: randomRoleName(),
 					Root:  true,
 					TTL:   1 * time.Hour,
@@ -399,7 +379,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"root-password": {
-				roleEntry: &roleEntry{
+				RoleEntry: &RoleEntry{
 					Cloud:      randomRoleName(),
 					Root:       true,
 					SecretType: SecretPassword,
@@ -407,7 +387,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"root-user-groups": {
-				roleEntry: &roleEntry{
+				RoleEntry: &RoleEntry{
 					Cloud:      randomRoleName(),
 					Root:       true,
 					UserGroups: []string{"ug-1"},
@@ -415,7 +395,7 @@ func TestRoleCreate(t *testing.T) {
 				errorRegex: notForRootRe,
 			},
 			"without-cloud": {
-				roleEntry:  &roleEntry{},
+				RoleEntry:  &RoleEntry{},
 				errorRegex: regexp.MustCompile(`cloud is required when creating a role`),
 			},
 		}
@@ -427,7 +407,7 @@ func TestRoleCreate(t *testing.T) {
 				b, s := testBackend(t)
 
 				roleName := randomRoleName()
-				inputRole := fixtures.SanitizedMap(roleToMap(data.roleEntry))
+				inputRole := fixtures.SanitizedMap(roleToMap(data.RoleEntry))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.CreateOperation,
@@ -443,7 +423,7 @@ func TestRoleCreate(t *testing.T) {
 	})
 
 	t.Run("store-err", func(t *testing.T) {
-		data := &roleEntry{
+		data := &RoleEntry{
 			Cloud:       randomRoleName(),
 			ProjectName: randomRoleName(),
 			SecretType:  SecretToken,
@@ -481,8 +461,8 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
-		exp2 := &roleEntry{
+		_, exp := fixtures.ExpectedRoleData()
+		exp2 := &RoleEntry{
 			ProjectID:   "",
 			ProjectName: tools.RandomString("p", 5),
 		}
@@ -500,7 +480,7 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("not-existing", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
+		_, exp := fixtures.ExpectedRoleData()
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
@@ -514,7 +494,7 @@ func TestRoleUpdate(t *testing.T) {
 	})
 }
 
-func fillRoleDefaultFields(b *backend, entry *roleEntry) {
+func fillRoleDefaultFields(b *backend, entry *RoleEntry) {
 	pr := b.pathRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
