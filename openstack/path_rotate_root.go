@@ -2,7 +2,6 @@ package openstack
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
@@ -12,8 +11,6 @@ import (
 )
 
 const (
-	pwdDefaultSet = `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+-={}[]:"'<>,./|\'?`
-
 	rotateHelpSyn  = "Rotate root cloud password."
 	rotateHelpDesc = `
 Rotate the cloud's root user credentials.
@@ -43,7 +40,7 @@ func (b *backend) pathRotateRoot() *framework.Path {
 			"charset": {
 				Type:        framework.TypeString,
 				Description: "Specifies the new password character set.",
-				Default:     pwdDefaultSet,
+				Default:     PwdDefaultSet,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -54,15 +51,6 @@ func (b *backend) pathRotateRoot() *framework.Path {
 		HelpSynopsis:    rotateHelpSyn,
 		HelpDescription: rotateHelpDesc,
 	}
-}
-
-func randomString(charset string, size int) string {
-	var bytes = make([]byte, size)
-	_, _ = rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = charset[b%byte(len(charset))]
-	}
-	return string(bytes)
 }
 
 func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -83,7 +71,7 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	newPassword := randomString(
+	newPassword := RandomString(
 		d.Get("charset").(string),
 		d.Get("size").(int),
 	)

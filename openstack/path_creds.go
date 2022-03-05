@@ -14,8 +14,6 @@ import (
 )
 
 const (
-	nameDefaultSet = `0123456789abcdefghijklmnopqrstuvwxyz`
-
 	pathCreds = "creds"
 
 	credsHelpSyn  = "Manage the OpenStack credentials with roles."
@@ -118,7 +116,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 }
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
-	password := randomString(pwdDefaultSet, 6)
+	password := RandomString(PwdDefaultSet, 6)
 	user, err := createUser(client, password)
 	if err != nil {
 		return nil, err
@@ -267,7 +265,7 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 }
 
 func createUser(client *gophercloud.ServiceClient, password string) (*users.User, error) {
-	username := randomString(nameDefaultSet, 6)
+	username := RandomString(NameDefaultSet, 6)
 	createOpts := users.CreateOpts{
 		Name:        username,
 		Description: "Vault's temporary user",
