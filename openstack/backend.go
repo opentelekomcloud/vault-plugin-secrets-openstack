@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -95,18 +95,20 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("no cloud found with name %s", c.name)
 	}
 
-	clientOpts := &clientconfig.ClientOpts{
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:        cloud.AuthURL,
-			Username:       cloud.Username,
-			Password:       cloud.Password,
-			UserDomainName: cloud.UserDomainName,
-		},
+	opts := gophercloud.AuthOptions{
+		IdentityEndpoint: cloud.AuthURL,
+		Username:         cloud.Username,
+		Password:         cloud.Password,
+		DomainName:       cloud.UserDomainName,
 	}
 
-	sClient, err := clientconfig.NewServiceClient("identity", clientOpts)
+	pClient, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating provider client: %w", err)
+	}
+	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
+	if err != nil {
+		return fmt.Errorf("error creating service client: %w", err)
 	}
 
 	c.client = sClient
