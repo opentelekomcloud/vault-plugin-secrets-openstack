@@ -20,7 +20,6 @@ func (p *PluginTest) TestCredsLifecycle() {
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)
 
-	// create temporary user, so base root won't be rotated
 	newCloud := p.makeChildCloud(cloud)
 
 	t.Run("WriteCloud", func(t *testing.T) {
