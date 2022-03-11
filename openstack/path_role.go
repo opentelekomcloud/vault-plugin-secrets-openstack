@@ -210,25 +210,34 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	var cloudName string
+	if cloud, ok := d.GetOk("cloud"); ok {
+		cloudName = cloud.(string)
+	} else {
+		if req.Operation == logical.CreateOperation {
+			return logical.ErrorResponse("cloud is required when creating a role"), nil
+		}
+	}
+	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if cld == nil {
+		return logical.ErrorResponse("cloud `%s` doesn't exist"), nil
+	}
+
 	name := d.Get("name").(string)
 
 	entry, err := getRoleByName(ctx, name, req.Storage)
 	if err != nil {
-		return logical.ErrorResponse("failed to find the role"), err
+		return nil, err
 	}
 	if entry == nil {
 		if req.Operation == logical.UpdateOperation {
 			return logical.ErrorResponse("role `%s` not found during update operation", name), nil
 		}
-		entry = &roleEntry{Name: name}
-	}
-
-	if cloud, ok := d.GetOk("cloud"); ok {
-		entry.Cloud = cloud.(string)
-	} else {
-		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("cloud is required when creating a role"), nil
-		}
+		entry = &roleEntry{Name: name, Cloud: cloudName}
 	}
 
 	if isRoot, ok := d.GetOk("root"); ok {

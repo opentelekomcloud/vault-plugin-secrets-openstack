@@ -31,10 +31,10 @@ func randomRoleName() string {
 	return tools.RandomString("k", 5) + "m"
 }
 
-func expectedRoleData() (*roleEntry, map[string]interface{}) {
+func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 	expTTL := time.Hour
 	expected := &roleEntry{
-		Cloud:       tools.RandomString("cl", 5),
+		Cloud:       cloudName,
 		TTL:         expTTL / time.Second,
 		ProjectName: tools.RandomString("p", 5),
 	}
@@ -65,7 +65,7 @@ func TestRoleGet(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := expectedRoleData(randomRoleName())
 
 		saveRawRole(t, roleName, expectedMap, s)
 
@@ -116,7 +116,7 @@ func TestRoleExistence(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
+		_, exp := expectedRoleData(randomRoleName())
 		saveRawRole(t, roleName, exp, s)
 
 		req := &logical.Request{Storage: s}
@@ -172,7 +172,7 @@ func TestRoleList(t *testing.T) {
 		for i := 0; i < roleCount; i++ {
 			name := randomRoleName()
 			roleNames[i] = name
-			_, exp := expectedRoleData()
+			_, exp := expectedRoleData(randomRoleName())
 			saveRawRole(t, name, exp, s)
 		}
 
@@ -204,10 +204,10 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData()
+		expRole1, expMap1 := expectedRoleData(randomRoleName())
 		saveRawRole(t, name1, expMap1, s)
 		name2 := randomRoleName()
-		_, expMap2 := expectedRoleData()
+		_, expMap2 := expectedRoleData(randomRoleName())
 		saveRawRole(t, name2, expMap2, s)
 
 		lst, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -227,7 +227,7 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t, failVerbRead)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData()
+		expRole1, expMap1 := expectedRoleData(randomRoleName())
 		saveRawRole(t, name1, expMap1, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -250,7 +250,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := expectedRoleData(randomRoleName())
 		saveRawRole(t, roleName, expectedMap, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -280,7 +280,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbDelete)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := expectedRoleData(randomRoleName())
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -296,7 +296,7 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbRead)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData()
+		_, expectedMap := expectedRoleData(randomRoleName())
 		saveRawRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -313,29 +313,33 @@ func TestRoleCreate(t *testing.T) {
 
 	id, _ := uuid.GenerateUUID()
 	t.Run("ok", func(t *testing.T) {
+
+		b, s := testBackend(t)
+		cloudName := precreateCloud(t, s)
+
 		cases := map[string]*roleEntry{
 			"admin": {
 				Name:  randomRoleName(),
-				Cloud: randomRoleName(),
+				Cloud: cloudName,
 				Root:  true,
 			},
 			"token": {
 				Name:        randomRoleName(),
-				Cloud:       randomRoleName(),
+				Cloud:       cloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
 			},
 			"password": {
 				Name:        randomRoleName(),
-				Cloud:       randomRoleName(),
+				Cloud:       cloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
 				UserGroups:  []string{"default", "testing"},
 			},
 			"ttl": {
 				Name:        randomRoleName(),
-				Cloud:       randomRoleName(),
+				Cloud:       cloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
@@ -343,7 +347,7 @@ func TestRoleCreate(t *testing.T) {
 			},
 			"endpoint-override": {
 				Name:      randomRoleName(),
-				Cloud:     randomRoleName(),
+				Cloud:     cloudName,
 				ProjectID: id,
 				Extensions: map[string]string{
 					"volume_api_version":             "3",
@@ -356,7 +360,6 @@ func TestRoleCreate(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				data := data
 				t.Parallel()
-				b, s := testBackend(t)
 
 				roleName := data.Name
 				inputRole := fixtures.SanitizedMap(roleToMap(data))
@@ -388,11 +391,14 @@ func TestRoleCreate(t *testing.T) {
 			errorRegex *regexp.Regexp
 		}
 
+		b, s := testBackend(t)
+		cloudName := precreateCloud(t, s)
+
 		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
 			"root-ttl": {
 				roleEntry: &roleEntry{
-					Cloud: randomRoleName(),
+					Cloud: cloudName,
 					Root:  true,
 					TTL:   1 * time.Hour,
 				},
@@ -400,7 +406,7 @@ func TestRoleCreate(t *testing.T) {
 			},
 			"root-password": {
 				roleEntry: &roleEntry{
-					Cloud:      randomRoleName(),
+					Cloud:      cloudName,
 					Root:       true,
 					SecretType: SecretPassword,
 				},
@@ -408,7 +414,7 @@ func TestRoleCreate(t *testing.T) {
 			},
 			"root-user-groups": {
 				roleEntry: &roleEntry{
-					Cloud:      randomRoleName(),
+					Cloud:      cloudName,
 					Root:       true,
 					UserGroups: []string{"ug-1"},
 				},
@@ -424,7 +430,6 @@ func TestRoleCreate(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				data := data
 				t.Parallel()
-				b, s := testBackend(t)
 
 				roleName := randomRoleName()
 				inputRole := fixtures.SanitizedMap(roleToMap(data.roleEntry))
@@ -442,47 +447,70 @@ func TestRoleCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("store-err", func(t *testing.T) {
-		data := &roleEntry{
-			Cloud:       randomRoleName(),
-			ProjectName: randomRoleName(),
-			SecretType:  SecretToken,
-			UserGroups:  []string{"default", "testing"},
-		}
-		cases := map[string]failVerb{
-			"read":  failVerbRead,
-			"write": failVerbPut,
-		}
-		for name, verb := range cases {
-			t.Run(name, func(t *testing.T) {
-				b, s := testBackend(t, verb)
-				t.Parallel()
+	t.Run("not-existing-cloud", func(t *testing.T) {
+		t.Parallel()
+		b, s := testBackend(t)
 
-				roleName := randomRoleName()
-				inputRole := fixtures.SanitizedMap(roleToMap(data))
-
-				_, err := b.HandleRequest(context.Background(), &logical.Request{
-					Operation: logical.CreateOperation,
-					Path:      rolePath(roleName),
-					Data:      inputRole,
-					Storage:   s,
-				})
-				require.Error(t, err)
-
-			})
+		role := &roleEntry{
+			Name:  randomRoleName(),
+			Cloud: randomRoleName(),
 		}
+		inputRole := fixtures.SanitizedMap(roleToMap(role))
+
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      rolePath(role.Name),
+			Data:      inputRole,
+			Storage:   s,
+		})
+		require.NoError(t, err)
+		require.True(t, resp.IsError())
+		assert.Regexp(t, regexp.MustCompile(`cloud .+ doesn't exist`), resp.Data["error"])
 	})
+
+	t.Run("save-store-err", func(t *testing.T) {
+		_, s := testBackend(t, failVerbPut)
+		t.Parallel()
+
+		d, _ := expectedRoleData(randomRoleName())
+		err := saveRole(context.Background(), d, s)
+		require.Error(t, err)
+	})
+}
+
+func precreateCloud(t *testing.T, s logical.Storage) string {
+	t.Helper()
+
+	name := randomRoleName()
+	cloudStoragePath := storageCloudKey(name)
+
+	entry, err := logical.StorageEntryJSON(cloudStoragePath, &OsCloud{
+		Name:           testCloudName,
+		AuthURL:        testAuthURL,
+		UserDomainName: testUserDomainName,
+		Username:       testUsername,
+		Password:       testPassword1,
+	})
+	require.NoError(t, err)
+	require.NoError(t, s.Put(context.Background(), entry))
+
+	t.Cleanup(func() {
+		require.NoError(t, s.Delete(context.Background(), cloudStoragePath))
+	})
+	return name
 }
 
 func TestRoleUpdate(t *testing.T) {
 	t.Parallel()
 
 	b, s := testBackend(t)
+	cloudName := precreateCloud(t, s)
 
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
+		_, exp := expectedRoleData(randomRoleName())
 		exp2 := &roleEntry{
+			Cloud:       cloudName,
 			ProjectID:   "",
 			ProjectName: tools.RandomString("p", 5),
 		}
@@ -500,7 +528,7 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("not-existing", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData()
+		_, exp := expectedRoleData(cloudName)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
