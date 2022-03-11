@@ -22,7 +22,10 @@ func (p *PluginTest) TestCredsLifecycle() {
 
 	newCloud := p.makeChildCloud(cloud)
 
-	t.Run("WriteCloud", func(t *testing.T) {
+	_, aux := openstackClient(t)
+	roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
+
+	t.Run("CredsRootToken", func(t *testing.T) {
 		resp, err := p.vaultDo(
 			http.MethodPost,
 			cloudURL(cloudName),
@@ -30,23 +33,16 @@ func (p *PluginTest) TestCredsLifecycle() {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
-	})
 
-	_, aux := openstackClient(t)
-	roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
-
-	t.Run("WriteRole", func(t *testing.T) {
-		resp, err := p.vaultDo(
+		resp, err = p.vaultDo(
 			http.MethodPost,
 			roleURL(roleName),
 			cloudToRoleMap(newCloud, aux),
 		)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
-	})
 
-	t.Run("CredsRootToken", func(t *testing.T) {
-		resp, err := p.vaultDo(
+		resp, err = p.vaultDo(
 			http.MethodGet,
 			credsURL(roleName),
 			nil,
