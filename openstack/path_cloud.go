@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -109,6 +110,9 @@ func (b *backend) pathClouds() *framework.Path {
 		Pattern: pathClouds,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCloudList,
+			},
+			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCloudList,
 			},
 		},

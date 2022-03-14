@@ -149,7 +149,7 @@ func fileSHA256(t *testing.T, path string) string {
 	_, err = io.Copy(hasher, f)
 	require.NoError(t, err)
 	sum := hex.EncodeToString(hasher.Sum(nil))
-	return string(sum)
+	return sum
 }
 
 func TestPlugin(t *testing.T) {
@@ -306,4 +306,16 @@ func (p *PluginTest) makeCloud(cloud *openstack.OsCloud) {
 		requireStatusCode(t, http.StatusNoContent, r)
 		t.Logf("Cloud with name `%s` has been removed", cloud.Name)
 	})
+}
+
+var listMethods = []string{"LIST", http.MethodGet}
+
+func testListMethods(t *testing.T, f func(t *testing.T, m string)) {
+	for _, method := range listMethods {
+		t.Run(fmt.Sprintf("method-%s", method), func(t *testing.T) {
+			method := method
+			t.Parallel()
+			f(t, method)
+		})
+	}
 }
