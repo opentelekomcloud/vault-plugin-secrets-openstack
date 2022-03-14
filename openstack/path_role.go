@@ -48,6 +48,9 @@ func (b *backend) pathRoles() *framework.Path {
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRolesList,
 			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRolesList,
+			},
 		},
 		HelpSynopsis:    rolesListHelpSyn,
 		HelpDescription: rolesListHelpDesc,

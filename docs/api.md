@@ -79,7 +79,8 @@ This endpoint allows you to list configurations values that have been configured
 
 | Method | Path                 |
 |:-------|:---------------------|
-| `LIST` | `/openstack/configs` |
+| `LIST` | `/openstack/clouds`  |
+| `GET`  | `/openstack/clouds`  |
 
 ### Sample Request
 
@@ -87,7 +88,7 @@ This endpoint allows you to list configurations values that have been configured
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
-    http://127.0.0.1:8200/v1/openstack/configs
+    http://127.0.0.1:8200/v1/openstack/clouds
 ```
 
 ### Sample Response
@@ -290,6 +291,7 @@ This endpoint queries an existing role by the given name. If the role does not e
 | Method | Path               |
 |:-------|:-------------------|
 | `LIST` | `/openstack/roles` |
+| `GET`  | `/openstack/roles` |
 
 
 ### Parameters

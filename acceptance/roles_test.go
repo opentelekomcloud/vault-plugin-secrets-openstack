@@ -86,12 +86,14 @@ func (p *PluginTest) TestRoleLifecycle() {
 	})
 
 	t.Run("ListRoles", func(t *testing.T) {
-		resp, err := p.vaultDo("LIST", "/v1/openstack/roles", nil)
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		names := listResponseKeys(t, resp)
-		require.Len(t, names, 1)
-		assert.Equal(t, roleName, names[0])
+		testListMethods(t, func(t *testing.T, m string) {
+			resp, err := p.vaultDo(m, "/v1/openstack/roles", nil)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			names := listResponseKeys(t, resp)
+			require.Len(t, names, 1)
+			assert.Equal(t, roleName, names[0])
+		})
 	})
 
 	t.Run("DeleteRole", func(t *testing.T) {
