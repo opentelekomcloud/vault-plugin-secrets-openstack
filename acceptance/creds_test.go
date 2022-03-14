@@ -52,7 +52,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			nil,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assertStatusCode(t, http.StatusOK, resp)
 
 		resp, err = p.vaultDo(
 			http.MethodDelete,
@@ -60,7 +60,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			nil,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		assertStatusCode(t, http.StatusNoContent, resp)
 	})
 }
 
@@ -75,6 +75,7 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 		"username":         cloud.Username,
 		"password":         cloud.Password,
 		"user_domain_name": cloud.UserDomainName,
+		"project_name":     cloud.ProjectName,
 	}
 }
 
@@ -83,6 +84,6 @@ func cloudToRoleMap(cloud *openstack.OsCloud, auxData *AuxiliaryData) map[string
 		"cloud":       cloud.Name,
 		"project_id":  auxData.ProjectID,
 		"root":        false,
-		"secret_type": "token",
+		"secret_type": "password",
 	}
 }

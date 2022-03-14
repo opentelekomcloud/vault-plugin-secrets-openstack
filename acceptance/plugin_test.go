@@ -245,6 +245,7 @@ func openstackCloudConfig(t *testing.T) *openstack.OsCloud {
 		UserDomainName: getDomainName(cloud.AuthInfo),
 		Username:       cloud.AuthInfo.Username,
 		Password:       cloud.AuthInfo.Password,
+		ProjectName:    cloud.AuthInfo.ProjectName,
 	}
 }
 

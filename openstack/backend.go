@@ -100,6 +100,7 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		Username:         cloud.Username,
 		Password:         cloud.Password,
 		DomainName:       cloud.UserDomainName,
+		TenantName:       cloud.ProjectName,
 	}
 
 	pClient, err := openstack.AuthenticatedClient(opts)
@@ -120,6 +121,7 @@ type OsCloud struct {
 	Name           string `json:"name"`
 	AuthURL        string `json:"auth_url"`
 	UserDomainName string `json:"user_domain_name"`
+	ProjectName    string `json:"project_name"`
 	Username       string `json:"username"`
 	Password       string `json:"password"`
 }

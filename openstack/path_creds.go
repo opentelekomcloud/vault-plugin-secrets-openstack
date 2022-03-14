@@ -125,13 +125,9 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 	var secretInternal map[string]interface{}
 	if role.SecretType == "token" {
 		opts := &tokens.AuthOptions{
-			Username:   user.Name,
-			Password:   password,
-			DomainName: config.UserDomainName,
-			Scope: tokens.Scope{
-				ProjectID:   role.ProjectID,
-				ProjectName: role.ProjectName,
-			},
+			Username: user.Name,
+			Password: password,
+			DomainID: user.DomainID,
 		}
 		token, err := createToken(client, opts)
 		if err != nil {
