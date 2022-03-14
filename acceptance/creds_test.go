@@ -5,13 +5,11 @@ package acceptance
 
 import (
 	"fmt"
-	"net/http"
-	"testing"
-	"time"
-
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"net/http"
+	"testing"
 )
 
 func (p *PluginTest) TestCredsLifecycle() {
@@ -20,8 +18,6 @@ func (p *PluginTest) TestCredsLifecycle() {
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)
 
-	newCloud := p.makeChildCloud(cloud)
-
 	_, aux := openstackClient(t)
 	roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
@@ -29,7 +25,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 		resp, err := p.vaultDo(
 			http.MethodPost,
 			cloudURL(cloudName),
-			cloudToCloudMap(newCloud),
+			cloudToCloudMap(cloud),
 		)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
@@ -37,7 +33,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 		resp, err = p.vaultDo(
 			http.MethodPost,
 			roleURL(roleName),
-			cloudToRoleMap(newCloud, aux),
+			cloudToRoleMap(cloud, aux),
 		)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
@@ -49,6 +45,22 @@ func (p *PluginTest) TestCredsLifecycle() {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+
+		resp, err = p.vaultDo(
+			http.MethodDelete,
+			roleURL(roleName),
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		resp, err = p.vaultDo(
+			http.MethodDelete,
+			cloudURL(cloudName),
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 }
 
@@ -69,9 +81,8 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 func cloudToRoleMap(cloud *openstack.OsCloud, auxData *AuxiliaryData) map[string]interface{} {
 	return map[string]interface{}{
 		"cloud":       cloud.Name,
-		"ttl":         time.Hour / time.Second,
 		"project_id":  auxData.ProjectID,
-		"root":        true,
+		"root":        false,
 		"secret_type": "token",
 	}
 }

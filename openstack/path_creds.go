@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -89,7 +87,6 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		Password:   config.Password,
 		DomainName: config.UserDomainName,
 		Scope: tokens.Scope{
-			DomainName:  config.UserDomainName,
 			ProjectName: role.ProjectName,
 			ProjectID:   role.ProjectID,
 		},
@@ -134,7 +131,6 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			Scope: tokens.Scope{
 				ProjectID:   role.ProjectID,
 				ProjectName: role.ProjectName,
-				DomainID:    user.DomainID,
 			},
 		}
 		token, err := createToken(client, opts)
@@ -279,6 +275,7 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 		Description: "Vault's temporary user",
 		DomainID:    user.Domain.ID,
 		Password:    password,
+		DomainID:    user.Domain.ID,
 	}
 	newUser, err := users.Create(client, userCreateOpts).Extract()
 	if err != nil {
