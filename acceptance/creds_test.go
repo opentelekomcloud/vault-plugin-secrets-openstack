@@ -19,49 +19,81 @@ func (p *PluginTest) TestCredsLifecycle() {
 	require.NotEmpty(t, cloud)
 
 	_, aux := openstackClient(t)
-	roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
-	t.Run("CredsRootToken", func(t *testing.T) {
-		resp, err := p.vaultDo(
-			http.MethodPost,
-			cloudURL(cloudName),
-			cloudToCloudMap(cloud),
-		)
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
+	type testCase struct {
+		Cloud      string
+		ProjectID  string
+		Root       bool
+		SecretType string
+	}
 
-		resp, err = p.vaultDo(
-			http.MethodPost,
-			roleURL(roleName),
-			cloudToRoleMap(cloud, aux),
-		)
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+	cases := map[string]testCase{
+		"root_token": {
+			Cloud:      cloud.Name,
+			ProjectID:  aux.ProjectID,
+			Root:       true,
+			SecretType: "",
+		},
+		"user_token": {
+			Cloud:      cloud.Name,
+			ProjectID:  aux.ProjectID,
+			Root:       false,
+			SecretType: "token",
+		},
+		"user_password": {
+			Cloud:      cloud.Name,
+			ProjectID:  aux.ProjectID,
+			Root:       false,
+			SecretType: "password",
+		},
+	}
 
-		resp, err = p.vaultDo(
-			http.MethodGet,
-			credsURL(roleName),
-			nil,
-		)
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			data := data
+			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
-		resp, err = p.vaultDo(
-			http.MethodDelete,
-			roleURL(roleName),
-			nil,
-		)
-		require.NoError(t, err)
-		assertStatusCode(t, http.StatusOK, resp)
+			resp, err := p.vaultDo(
+				http.MethodPost,
+				cloudURL(cloudName),
+				cloudToCloudMap(cloud),
+			)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 
-		resp, err = p.vaultDo(
-			http.MethodDelete,
-			cloudURL(cloudName),
-			nil,
-		)
-		require.NoError(t, err)
-		assertStatusCode(t, http.StatusNoContent, resp)
-	})
+			resp, err = p.vaultDo(
+				http.MethodPost,
+				roleURL(roleName),
+				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.SecretType),
+			)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+
+			resp, err = p.vaultDo(
+				http.MethodGet,
+				credsURL(roleName),
+				nil,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+
+			resp, err = p.vaultDo(
+				http.MethodDelete,
+				roleURL(roleName),
+				nil,
+			)
+			require.NoError(t, err)
+			assertStatusCode(t, http.StatusOK, resp)
+
+			resp, err = p.vaultDo(
+				http.MethodDelete,
+				cloudURL(cloudName),
+				nil,
+			)
+			require.NoError(t, err)
+			assertStatusCode(t, http.StatusNoContent, resp)
+		})
+	}
 }
 
 func credsURL(roleName string) string {
@@ -79,11 +111,11 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	}
 }
 
-func cloudToRoleMap(cloud *openstack.OsCloud, auxData *AuxiliaryData) map[string]interface{} {
+func cloudToRoleMap(root bool, cloud, projectID, secretType string) map[string]interface{} {
 	return map[string]interface{}{
-		"cloud":       cloud.Name,
-		"project_id":  auxData.ProjectID,
-		"root":        false,
-		"secret_type": "password",
+		"cloud":       cloud,
+		"project_id":  projectID,
+		"root":        root,
+		"secret_type": secretType,
 	}
 }
