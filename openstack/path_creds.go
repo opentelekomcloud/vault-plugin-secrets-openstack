@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -199,6 +200,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 	if role.Root {
 		return getRootCredentials(client, role, cloudConfig)
 	}
+
 	return getTmpUserCredentials(client, role, cloudConfig)
 }
 
@@ -235,6 +237,10 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 	if !ok {
 		return nil, errors.New("internal data 'user_id' not found")
 	}
+	log.Printf("r.Secret: %+v", r.Secret)
+	log.Printf("r.Secret.InternalData: %+v", r.Secret.InternalData)
+	log.Printf("r.Storage: %+v", r.Storage)
+	log.Printf("Backend: %+v", b)
 
 	userID := userIDRaw.(string)
 
@@ -244,7 +250,12 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 		return nil, err
 	}
 
+	log.Printf("userID: %v", userID)
+	log.Printf("Role Name: %+v", roleName)
+	log.Printf("role: %+v", role)
+
 	sharedCloud := b.getSharedCloud(role.Cloud)
+	log.Printf("Shared Cloud: %+v", sharedCloud)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err

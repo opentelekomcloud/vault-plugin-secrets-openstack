@@ -148,7 +148,7 @@ type roleEntry struct {
 	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
 	TTL         time.Duration     `json:"ttl,omitempty"`
-	SecretType  secretType        `json:"secret_type"`
+	SecretType  secretType        `json:"secret_type,omitempty"`
 	UserGroups  []string          `json:"user_groups"`
 	UserRoles   []string          `json:"user_roles"`
 	ProjectID   string            `json:"project_id"`

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -218,6 +219,8 @@ func openstackClient(t *testing.T) (*gophercloud.ServiceClient, *AuxiliaryData) 
 	require.NoError(t, err)
 	user, err := token.ExtractUser()
 	require.NoError(t, err)
+
+	log.Printf("User AUX data: %+v", user)
 
 	aux := &AuxiliaryData{
 		UserID:    user.ID,
