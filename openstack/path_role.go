@@ -266,7 +266,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
-		if entry.Root {
+		if entry.Root && typ != "" {
 			return logical.ErrorResponse(errInvalidForRoot, "secret type"), nil
 		}
 		entry.SecretType = secretType(typ.(string))

@@ -33,9 +33,9 @@ func secretToken(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "OpenStack Token.",
 			},
-			"role": {
+			"cloud": {
 				Type:        framework.TypeString,
-				Description: "Used role.",
+				Description: "Used cloud.",
 			},
 		},
 		Revoke: b.tokenRevoke,
@@ -50,9 +50,9 @@ func secretUser(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "User ID of temporary account.",
 			},
-			"role": {
+			"cloud": {
 				Type:        framework.TypeString,
-				Description: "Used role.",
+				Description: "Used cloud.",
 			},
 		},
 		Revoke: b.userDelete,
@@ -80,7 +80,7 @@ func (b *backend) pathCreds() *framework.Path {
 }
 
 func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
-	if role.SecretType != "token" {
+	if role.SecretType == "password" {
 		return nil, errRootNotToken
 	}
 	tokenOpts := &tokens.AuthOptions{
@@ -98,7 +98,6 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 	}
 
 	data := map[string]interface{}{
-		"role":       role.Name,
 		"auth_url":   config.AuthURL,
 		"token":      token.ID,
 		"expires_at": token.ExpiresAt.String(),
@@ -110,6 +109,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		},
 		InternalData: map[string]interface{}{
 			"secret_type": backendSecretTypeToken,
+			"cloud":       config.Name,
 		},
 	}
 	return &logical.Response{Data: data, Secret: secret}, nil
@@ -135,7 +135,6 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			return nil, err
 		}
 		data = map[string]interface{}{
-			"role":       role.Name,
 			"auth_url":   config.AuthURL,
 			"token":      token.ID,
 			"expires_at": token.ExpiresAt.String(),
@@ -143,10 +142,10 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
+			"cloud":       config.Name,
 		}
 	} else {
 		data = map[string]interface{}{
-			"role":     role.Name,
 			"auth_url": config.AuthURL,
 			"username": user.Name,
 			"password": password,
@@ -165,6 +164,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
+			"cloud":       config.Name,
 		}
 	}
 	return &logical.Response{
@@ -180,11 +180,15 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 }
 
 func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Path /creds/read passing")
 	roleName := d.Get("role").(string)
 	role, err := getRoleByName(ctx, roleName, r.Storage)
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("role name: %v", roleName)
+	log.Printf("role from storage: %v", role)
 
 	sharedCloud := b.getSharedCloud(role.Cloud)
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
@@ -205,6 +209,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Path /creds/revoke_token passing")
 	tokenRaw, ok := d.GetOk("token")
 	if !ok {
 		return nil, errors.New("data 'token' not found")
@@ -212,13 +217,14 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 
 	token := tokenRaw.(string)
 
-	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r.Storage)
-	if err != nil {
-		return nil, err
+	cloudNameRaw, ok := r.Secret.InternalData["cloud"]
+	if !ok {
+		return nil, errors.New("internal data 'cloud' not found")
 	}
 
-	sharedCloud := b.getSharedCloud(role.Cloud)
+	cloudName := cloudNameRaw.(string)
+
+	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err
@@ -232,30 +238,23 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 	return &logical.Response{}, nil
 }
 
-func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Path /creds/revoke_user started")
 	userIDRaw, ok := r.Secret.InternalData["user_id"]
 	if !ok {
 		return nil, errors.New("internal data 'user_id' not found")
 	}
-	log.Printf("r.Secret: %+v", r.Secret)
-	log.Printf("r.Secret.InternalData: %+v", r.Secret.InternalData)
-	log.Printf("r.Storage: %+v", r.Storage)
-	log.Printf("Backend: %+v", b)
 
 	userID := userIDRaw.(string)
 
-	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r.Storage)
-	if err != nil {
-		return nil, err
+	cloudNameRaw, ok := r.Secret.InternalData["cloud"]
+	if !ok {
+		return nil, errors.New("internal data 'cloud' not found")
 	}
 
-	log.Printf("userID: %v", userID)
-	log.Printf("Role Name: %+v", roleName)
-	log.Printf("role: %+v", role)
+	cloudName := cloudNameRaw.(string)
 
-	sharedCloud := b.getSharedCloud(role.Cloud)
-	log.Printf("Shared Cloud: %+v", sharedCloud)
+	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err

@@ -29,10 +29,9 @@ func (p *PluginTest) TestCredsLifecycle() {
 
 	cases := map[string]testCase{
 		"root_token": {
-			Cloud:      cloud.Name,
-			ProjectID:  aux.ProjectID,
-			Root:       true,
-			SecretType: "",
+			Cloud:     cloud.Name,
+			ProjectID: aux.ProjectID,
+			Root:      true,
 		},
 		"user_token": {
 			Cloud:      cloud.Name,
@@ -65,6 +64,14 @@ func (p *PluginTest) TestCredsLifecycle() {
 				http.MethodPost,
 				roleURL(roleName),
 				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.SecretType),
+			)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+
+			resp, err = p.vaultDo(
+				http.MethodGet,
+				roleURL(roleName),
+				nil,
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
