@@ -86,11 +86,16 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		Username:   config.Username,
 		Password:   config.Password,
 		DomainName: config.UserDomainName,
-		Scope: tokens.Scope{
-			DomainName:  config.UserDomainName,
+	}
+	if role.ProjectID != "" {
+		tokenOpts.Scope = tokens.Scope{
+			ProjectID: role.ProjectID,
+		}
+	} else {
+		tokenOpts.Scope = tokens.Scope{
 			ProjectName: role.ProjectName,
-			ProjectID:   role.ProjectID,
-		},
+			DomainName:  config.UserDomainName,
+		}
 	}
 	token, err := createToken(client, tokenOpts)
 	if err != nil {
