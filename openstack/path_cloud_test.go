@@ -16,6 +16,7 @@ var (
 	testAuthURL        = tools.RandomString("https://test.com/", 3)
 	testUsername       = tools.RandomString("user", 3)
 	testUserDomainName = tools.RandomString("domain", 3)
+	testProjectName    = tools.RandomString("project", 3)
 	testPassword1      = tools.RandomString("password1", 3)
 	testPassword2      = tools.RandomString("password2", 3)
 )

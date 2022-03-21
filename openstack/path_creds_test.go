@@ -37,6 +37,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 		Name:           testCloudName,
 		AuthURL:        authURL,
 		UserDomainName: testUserDomainName,
+		ProjectName:    testProjectName,
 		Username:       testUsername,
 		Password:       testPassword1,
 	})
@@ -213,6 +214,7 @@ func TestCredentialsRevoke_error(t *testing.T) {
 		"no-token-delete": {
 			EnabledMocks: fixtures.EnabledMocks{
 				TokenPost: true,
+				TokenGet:  true,
 			},
 			Root:        true,
 			ServiceType: "token",

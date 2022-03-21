@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -88,6 +87,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		Password:   config.Password,
 		DomainName: config.UserDomainName,
 		Scope: tokens.Scope{
+			DomainName:  config.UserDomainName,
 			ProjectName: role.ProjectName,
 			ProjectID:   role.ProjectID,
 		},
@@ -180,15 +180,11 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 }
 
 func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Path /creds/read passing")
 	roleName := d.Get("role").(string)
 	role, err := getRoleByName(ctx, roleName, r.Storage)
 	if err != nil {
 		return nil, err
 	}
-
-	log.Printf("role name: %v", roleName)
-	log.Printf("role from storage: %v", role)
 
 	sharedCloud := b.getSharedCloud(role.Cloud)
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
@@ -209,7 +205,6 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Path /creds/revoke_token passing")
 	tokenRaw, ok := d.GetOk("token")
 	if !ok {
 		return nil, errors.New("data 'token' not found")
@@ -239,7 +234,6 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 }
 
 func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Path /creds/revoke_user started")
 	userIDRaw, ok := r.Secret.InternalData["user_id"]
 	if !ok {
 		return nil, errors.New("internal data 'user_id' not found")

@@ -25,6 +25,8 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
+* `project_name` `(string: <required>)` - Name of the project of the root user.
+
 ### Sample Payload
 
 ```json
@@ -32,7 +34,8 @@ will overwrite them.
   "auth_url": "https://example.com/v3/",
   "username": "admin",
   "password": "RcigTiYrJjVmEkrV71Cd",
-  "user_domain_name": "Default"
+  "user_domain_name": "Default",
+  "project_name": "admin_project"
 }
 ```
 
@@ -69,7 +72,8 @@ $ curl \
 {
   "auth_url": "https://example.com/v3/",
   "username": "admin",
-  "user_domain_name": "Default"
+  "user_domain_name": "Default",
+  "project_name": "admin_project"
 }
 ```
 
