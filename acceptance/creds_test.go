@@ -5,11 +5,13 @@ package acceptance
 
 import (
 	"fmt"
-	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
+
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (p *PluginTest) TestCredsLifecycle() {
@@ -119,10 +121,10 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 }
 
 func cloudToRoleMap(root bool, cloud, projectID, secretType string) map[string]interface{} {
-	return map[string]interface{}{
+	return fixtures.SanitizedMap(map[string]interface{}{
 		"cloud":       cloud,
 		"project_id":  projectID,
 		"root":        root,
 		"secret_type": secretType,
-	}
+	})
 }
