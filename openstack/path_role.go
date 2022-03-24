@@ -83,7 +83,7 @@ func (b *backend) pathRole() *framework.Path {
 				Type:          framework.TypeLowerCaseString,
 				Description:   "Specifies what kind of secret will configuration contain.",
 				AllowedValues: []interface{}{"token", "password"},
-				Default:       "token",
+				Default:       SecretToken,
 			},
 			"user_groups": {
 				Type:        framework.TypeCommaStringSlice,
@@ -266,7 +266,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
-		if entry.Root && typ != "" {
+		if entry.Root && typ != SecretToken {
 			return logical.ErrorResponse(errInvalidForRoot, "secret type"), nil
 		}
 		entry.SecretType = secretType(typ.(string))

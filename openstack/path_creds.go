@@ -129,7 +129,8 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 
 	var data map[string]interface{}
 	var secretInternal map[string]interface{}
-	if role.SecretType == "token" {
+	switch r := role.SecretType; r {
+	case SecretPassword:
 		opts := &tokens.AuthOptions{
 			Username: user.Name,
 			Password: password,
@@ -149,7 +150,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			"user_id":     user.ID,
 			"cloud":       config.Name,
 		}
-	} else {
+	case SecretToken:
 		data = map[string]interface{}{
 			"auth_url": config.AuthURL,
 			"username": user.Name,
@@ -171,7 +172,10 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			"user_id":     user.ID,
 			"cloud":       config.Name,
 		}
+	default:
+		return nil, fmt.Errorf("invalid secret type: %s", r)
 	}
+
 	return &logical.Response{
 		Data: data,
 		Secret: &logical.Secret{

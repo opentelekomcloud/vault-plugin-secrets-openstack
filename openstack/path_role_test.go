@@ -528,7 +528,7 @@ func TestRoleUpdate(t *testing.T) {
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      rolePath(roleName),
-			Data:      roleToMap(exp2),
+			Data:      fixtures.SanitizedMap(roleToMap(exp2)),
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -555,7 +555,7 @@ func fillRoleDefaultFields(b *backend, entry *roleEntry) {
 	pr := b.pathRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
-		entry.SecretType = secretType(flds["secret_type"].Default.(string))
+		entry.SecretType = flds["secret_type"].Default.(secretType)
 	}
 	if !entry.Root {
 		if entry.TTL == 0 {
