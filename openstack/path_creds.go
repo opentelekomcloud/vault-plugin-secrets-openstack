@@ -79,7 +79,7 @@ func (b *backend) pathCreds() *framework.Path {
 }
 
 func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
-	if role.SecretType == "password" {
+	if role.SecretType == SecretPassword {
 		return nil, errRootNotToken
 	}
 	tokenOpts := &tokens.AuthOptions{

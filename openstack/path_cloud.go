@@ -74,7 +74,6 @@ func (b *backend) pathCloud() *framework.Path {
 			},
 			"project_name": {
 				Type:        framework.TypeString,
-				Required:    true,
 				Description: "Name of the project of the root user.",
 			},
 			"username": {
@@ -179,6 +178,7 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 		Data: map[string]interface{}{
 			"auth_url":         cloudConfig.AuthURL,
 			"user_domain_name": cloudConfig.UserDomainName,
+			"project_name":     cloudConfig.ProjectName,
 			"username":         cloudConfig.Username,
 			"password":         cloudConfig.Password,
 		},

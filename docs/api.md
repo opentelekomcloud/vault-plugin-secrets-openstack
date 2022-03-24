@@ -25,7 +25,7 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `project_name` `(string: <required>)` - Name of the project of the root user.
+* `project_name` `(string: <optional>)` - Project name of the root user.
 
 ### Sample Payload
 
