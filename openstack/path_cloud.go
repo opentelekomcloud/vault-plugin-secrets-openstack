@@ -72,10 +72,6 @@ func (b *backend) pathCloud() *framework.Path {
 				Required:    true,
 				Description: "Name of the domain of the root user.",
 			},
-			"project_name": {
-				Type:        framework.TypeString,
-				Description: "Name of the project of the root user.",
-			},
 			"username": {
 				Type:        framework.TypeString,
 				Required:    true,
@@ -153,9 +149,6 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 	if password, ok := d.GetOk("password"); ok {
 		cloudConfig.Password = password.(string)
 	}
-	if projectName, ok := d.GetOk("project_name"); ok {
-		cloudConfig.ProjectName = projectName.(string)
-	}
 
 	if err := cloudConfig.save(ctx, r.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -178,7 +171,6 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 		Data: map[string]interface{}{
 			"auth_url":         cloudConfig.AuthURL,
 			"user_domain_name": cloudConfig.UserDomainName,
-			"project_name":     cloudConfig.ProjectName,
 			"username":         cloudConfig.Username,
 			"password":         cloudConfig.Password,
 		},

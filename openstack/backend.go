@@ -86,6 +86,13 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	return c.client, nil
 }
 
+func logHttpError(err error) error {
+	if httpErr, ok := err.(gophercloud.ErrDefault401); ok {
+		return fmt.Errorf("response: %s\n %s", httpErr.Error(), httpErr.Body)
+	}
+	return err
+}
+
 func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 	cloud, err := c.getCloudConfig(ctx, s)
 	if err != nil {
@@ -100,13 +107,16 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		Username:         cloud.Username,
 		Password:         cloud.Password,
 		DomainName:       cloud.UserDomainName,
-		TenantName:       cloud.ProjectName,
+		Scope: &gophercloud.AuthScope{
+			DomainName: cloud.UserDomainName,
+		},
 	}
 
 	pClient, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
-		return fmt.Errorf("error creating provider client: %w", err)
+		return fmt.Errorf("error creating provider client: %w", logHttpError(err))
 	}
+
 	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
 	if err != nil {
 		return fmt.Errorf("error creating service client: %w", err)
@@ -121,7 +131,6 @@ type OsCloud struct {
 	Name           string `json:"name"`
 	AuthURL        string `json:"auth_url"`
 	UserDomainName string `json:"user_domain_name"`
-	ProjectName    string `json:"project_name"`
 	Username       string `json:"username"`
 	Password       string `json:"password"`
 }

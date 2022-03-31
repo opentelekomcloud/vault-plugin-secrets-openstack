@@ -5,6 +5,7 @@ package acceptance
 
 import (
 	"fmt"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"net/http"
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
@@ -26,6 +27,21 @@ func (p *PluginTest) makeChildCloud(base *openstack.OsCloud) *openstack.OsCloud 
 	}
 	user, err := users.Create(client, createUserOpts).Extract()
 	require.NoError(t, err)
+
+	rolePages, err := roles.List(client, roles.ListOpts{}).AllPages()
+	require.NoError(t, err)
+
+	rolesToAssign, err := roles.ExtractRoles(rolePages)
+	require.NoError(t, err)
+
+	for _, role := range rolesToAssign {
+		assignOpts := roles.AssignOpts{
+			UserID:    user.ID,
+			ProjectID: user.DefaultProjectID,
+			DomainID:  user.DomainID,
+		}
+		require.NoError(t, roles.Assign(client, role.ID, assignOpts).ExtractErr())
+	}
 
 	t.Cleanup(func() {
 		require.NoError(t, users.Delete(client, user.ID).ExtractErr())

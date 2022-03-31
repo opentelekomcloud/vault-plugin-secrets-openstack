@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -86,17 +87,9 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		Username:   config.Username,
 		Password:   config.Password,
 		DomainName: config.UserDomainName,
+		Scope:      *getScopeFromRole(role),
 	}
-	if role.ProjectID != "" {
-		tokenOpts.Scope = tokens.Scope{
-			ProjectID: role.ProjectID,
-		}
-	} else {
-		tokenOpts.Scope = tokens.Scope{
-			ProjectName: role.ProjectName,
-			DomainName:  config.UserDomainName,
-		}
-	}
+
 	token, err := createToken(client, tokenOpts)
 	if err != nil {
 		return nil, err
@@ -130,16 +123,23 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 	var data map[string]interface{}
 	var secretInternal map[string]interface{}
 	switch r := role.SecretType; r {
-	case SecretPassword:
-		opts := &tokens.AuthOptions{
+	case SecretToken:
+		tokenOpts := &tokens.AuthOptions{
 			Username: user.Name,
 			Password: password,
 			DomainID: user.DomainID,
+			Scope:    *getScopeFromRole(role),
 		}
-		token, err := createToken(client, opts)
+
+		log.Printf("TOKEN OPTS FOR A TMP USER: %+v", tokenOpts)
+
+		token, err := createToken(client, tokenOpts)
 		if err != nil {
 			return nil, err
 		}
+
+		log.Printf("TOKEM FOR A TMP USER - OK: %+v", token.ExpiresAt)
+
 		data = map[string]interface{}{
 			"auth_url":   config.AuthURL,
 			"token":      token.ID,
@@ -150,7 +150,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			"user_id":     user.ID,
 			"cloud":       config.Name,
 		}
-	case SecretToken:
+	case SecretPassword:
 		data = map[string]interface{}{
 			"auth_url": config.AuthURL,
 			"username": user.Name,
@@ -271,12 +271,16 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 	return &logical.Response{}, nil
 }
 
+func createUser(client *gophercloud.ServiceClient, password string, userGroups []string) (*users.User, error) {
+	log.Println("CREATE A USER")
 func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
 	token := tokens.Get(client, client.Token())
 	user, err := token.ExtractUser()
 	if err != nil {
 		return nil, fmt.Errorf("error extracting the user from token: %w", err)
 	}
+
+	log.Printf("TOKEN INFO: %+v", token)
 
 	username := RandomString(NameDefaultSet, 6)
 	userCreateOpts := users.CreateOpts{
@@ -285,8 +289,11 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 		DomainID:    user.Domain.ID,
 		Password:    password,
 		DomainID:    user.Domain.ID,
+		Password:    password,
 	}
+	log.Printf("userCreateOpts: %+v", userCreateOpts)
 	newUser, err := users.Create(client, userCreateOpts).Extract()
+	log.Printf("newUser: %+v", newUser)
 	if err != nil {
 		return nil, fmt.Errorf("error creating a user: %w", err)
 	}
@@ -321,6 +328,7 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
+	log.Println("CREATE A TOKEN")
 	token, err := tokens.Create(client, opts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a token: %w", err)
@@ -383,4 +391,29 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 		}
 	}
 	return filteredGroups, nil
+}
+
+func getScopeFromRole(role *roleEntry) *tokens.Scope {
+	switch {
+	case role.ProjectID != "":
+		return &tokens.Scope{
+			ProjectID: role.ProjectID,
+		}
+	case role.ProjectName != "":
+		return &tokens.Scope{
+			ProjectName: role.ProjectName,
+			DomainName:  role.DomainName,
+			DomainID:    role.DomainID,
+		}
+	case role.DomainID != "":
+		return &tokens.Scope{
+			DomainID: role.DomainID,
+		}
+	case role.DomainName != "":
+		return &tokens.Scope{
+			DomainName: role.DomainName,
+		}
+	default:
+		return nil
+	}
 }

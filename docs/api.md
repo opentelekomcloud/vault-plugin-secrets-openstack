@@ -25,8 +25,6 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `project_name` `(string: <optional>)` - Project name of the root user.
-
 ### Sample Payload
 
 ```json
@@ -34,8 +32,7 @@ will overwrite them.
   "auth_url": "https://example.com/v3/",
   "username": "admin",
   "password": "RcigTiYrJjVmEkrV71Cd",
-  "user_domain_name": "Default",
-  "project_name": "admin_project"
+  "user_domain_name": "Default"
 }
 ```
 
@@ -72,8 +69,7 @@ $ curl \
 {
   "auth_url": "https://example.com/v3/",
   "username": "admin",
-  "user_domain_name": "Default",
-  "project_name": "admin_project"
+  "user_domain_name": "Default"
 }
 ```
 
@@ -164,6 +160,12 @@ created. If the role exists, it will be updated with the new attributes.
 - `project_name` `(string: <optional>)` - Create a project-scoped role with given project name. Mutually exclusive with
   `project_id`.
 
+- `domain_id` `(string: <optional>)` - Create a domain-scoped role with given domain ID. Mutually exclusive with
+  `domain_name`.
+
+- `domain_name` `(string: <optional>)` - Create a domain-scoped role with given domain name. Mutually exclusive with
+  `domain_id`.
+
 When none of `project_name` or `project_id` is set, created role will have a project scope.
 
 - `extensions` `(list: [])` - A list of strings representing a key/value pair to be used as extensions to the cloud
@@ -222,7 +224,7 @@ $ curl \
 ```
 
 #### Creating a role with endpoint override
-
+#FIXME: extensions check
 ```json
 {
   "cloud": "example-cloud",
@@ -239,7 +241,7 @@ $ curl \
 ```
 
 or 
-
+#FIXME: extensions check, this one should be!
 ```json
 {
   "cloud": "example-cloud",
@@ -284,6 +286,7 @@ $ curl \
   "root": false,
   "secret_type": "password",
   "project_name": "test",
+  "domain_name": "test",
   "user_groups": [
     "default",
     "testing"

@@ -37,7 +37,6 @@ func TestCredentialsRead_ok(t *testing.T) {
 		Name:           testCloudName,
 		AuthURL:        authURL,
 		UserDomainName: testUserDomainName,
-		ProjectName:    testProjectName,
 		Username:       testUsername,
 		Password:       testPassword1,
 	})
