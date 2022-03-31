@@ -330,7 +330,6 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
-				UserRoles:   []string{"member"},
 			},
 			"password": {
 				Name:        randomRoleName(),
@@ -338,7 +337,6 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
 				UserGroups:  []string{"default", "testing"},
-				UserRoles:   []string{"member"},
 			},
 			"ttl": {
 				Name:        randomRoleName(),
@@ -346,7 +344,6 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
-				UserRoles:   []string{"member"},
 				TTL:         24 * time.Hour,
 			},
 			"endpoint-override": {
