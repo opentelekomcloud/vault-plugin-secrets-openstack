@@ -139,6 +139,7 @@ created. If the role exists, it will be updated with the new attributes.
 - `root` `(bool: <optional>)` - Specifies whenever to use the root user as a role actor.
   If set to `true`, `secret_type` can't be set to `password`.
   If set to `true`, `user_groups` value is ignored.
+  if set to `true`, `user_roles` value is ignored.
   If set to `true`, `ttl` value is ignored.
 
 - `ttl` `(string: "1h")` - Specifies TTL value for the dynamically created users as a
@@ -148,6 +149,9 @@ created. If the role exists, it will be updated with the new attributes.
   Valid choices are `token` and `password`.
 
 - `user_groups` `(list: []`) - Specifies list of existing OpenStack groups this Vault role is allowed to assume.
+  This is a comma-separated string or JSON array.
+
+- `user_roles` `(list: []`) - Specifies list of existing OpenStack roles this Vault role is allowed to assume.
   This is a comma-separated string or JSON array.
 
 - `project_id` `(string: <optional>)` - Create a project-scoped role with given project ID. Mutually exclusive with
@@ -185,6 +189,9 @@ $ curl \
   "user_groups": [
     "default",
     "testing"
+  ],
+  "user_roles": [
+    "member"
   ]
 }
 ```
@@ -209,6 +216,9 @@ $ curl \
   "user_groups": [
     "default",
     "testing"
+  ],
+  "user_roles": [
+    "member"
   ]
 }
 ```
@@ -222,6 +232,9 @@ $ curl \
   "user_groups": [
     "default",
     "testing"
+  ],
+  "user_roles": [
+    "member"
   ],
   "extensions": [
     "volume_api_version=3",
@@ -239,6 +252,9 @@ or
   "user_groups": [
     "default",
     "testing"
+  ],
+  "user_roles": [
+    "member"
   ],
   "extensions": {
     "volume_api_version": 3,
@@ -279,6 +295,9 @@ $ curl \
   "user_groups": [
     "default",
     "testing"
+  ],
+  "user_roles": [
+    "member"
   ],
   "ttl": "1h30m"
 }

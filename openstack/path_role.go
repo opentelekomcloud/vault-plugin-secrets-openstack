@@ -91,7 +91,7 @@ func (b *backend) pathRole() *framework.Path {
 			},
 			"user_roles": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Specifies list of existing OpenStack Identity roles this Vault role is allowed to assume.",
+				Description: "Specifies list of existing OpenStack roles this Vault role is allowed to assume.",
 			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
