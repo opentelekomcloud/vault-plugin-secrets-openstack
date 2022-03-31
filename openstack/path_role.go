@@ -89,6 +89,10 @@ func (b *backend) pathRole() *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Specifies list of existing OpenStack groups this Vault role is allowed to assume.",
 			},
+			"user_roles": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Specifies list of existing OpenStack Identity roles this Vault role is allowed to assume.",
+			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Specifies a project ID for project-scoped role.",
@@ -145,6 +149,7 @@ type roleEntry struct {
 	TTL         time.Duration     `json:"ttl,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
 	UserGroups  []string          `json:"user_groups"`
+	UserRoles   []string          `json:"user_roles"`
 	ProjectID   string            `json:"project_id"`
 	ProjectName string            `json:"project_name"`
 	Extensions  map[string]string `json:"extensions"`
@@ -191,6 +196,7 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"ttl":          src.TTL,
 		"secret_type":  string(src.SecretType),
 		"user_groups":  src.UserGroups,
+		"user_roles":   src.UserRoles,
 		"project_id":   src.ProjectID,
 		"project_name": src.ProjectName,
 		"extensions":   src.Extensions,
@@ -213,7 +219,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	var cloudName string
 	if cloud, ok := d.GetOk("cloud"); ok {
 		cloudName = cloud.(string)
@@ -285,6 +290,13 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse(errInvalidForRoot, "user groups"), nil
 		}
 		entry.UserGroups = groups.([]string)
+	}
+
+	if roles, ok := d.GetOk("user_roles"); ok {
+		if entry.Root {
+			return logical.ErrorResponse(errInvalidForRoot, "user roles"), nil
+		}
+		entry.UserRoles = roles.([]string)
 	}
 
 	if err := saveRole(ctx, entry, req.Storage); err != nil {
