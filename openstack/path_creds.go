@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -117,7 +119,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	password := RandomString(PwdDefaultSet, 6)
-	user, err := createUser(client, password)
+	user, err := createUser(client, password, role.UserGroups, role.UserRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -264,19 +266,66 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string) (*users.User, error) {
+func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
+	token := tokens.Get(client, client.Token())
+	user, err := token.ExtractUser()
+	if err != nil {
+		return nil, fmt.Errorf("error extracting the user from token: %w", err)
+	}
+
 	username := RandomString(NameDefaultSet, 6)
-	createOpts := users.CreateOpts{
+	userCreateOpts := users.CreateOpts{
 		Name:        username,
 		Description: "Vault's temporary user",
+		DomainID:    user.Domain.ID,
 		Password:    password,
 	}
-	user, err := users.Create(client, createOpts).Extract()
+	newUser, err := users.Create(client, userCreateOpts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a user: %w", err)
 	}
 
-	return user, nil
+	for _, role := range userRoles {
+		rolePages, err := roles.List(client, roles.ListOpts{
+			Name: role,
+		}).AllPages()
+		if err != nil {
+			return nil, err
+		}
+
+		roleList, err := roles.ExtractRoles(rolePages)
+		if err != nil {
+			return nil, err
+		}
+
+		assignOpts := roles.AssignOpts{
+			UserID:   newUser.ID,
+			DomainID: user.Domain.ID,
+		}
+		if err := roles.Assign(client, roleList[0].ID, assignOpts).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot assign role `%s` to a temporary user: %w", role, err)
+		}
+	}
+
+	for _, group := range userGroups {
+		groupPages, err := groups.List(client, groups.ListOpts{
+			Name: group,
+		}).AllPages()
+		if err != nil {
+			return nil, err
+		}
+
+		groupList, err := groups.ExtractGroups(groupPages)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := users.AddToGroup(client, groupList[0].ID, newUser.ID).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot add a temporary user in a group `%s`: %w", group, err)
+		}
+	}
+
+	return newUser, nil
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
