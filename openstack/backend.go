@@ -86,13 +86,6 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	return c.client, nil
 }
 
-func logHttpError(err error) error {
-	if httpErr, ok := err.(gophercloud.ErrDefault401); ok {
-		return fmt.Errorf("response: %s\n %s", httpErr.Error(), httpErr.Body)
-	}
-	return err
-}
-
 func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 	cloud, err := c.getCloudConfig(ctx, s)
 	if err != nil {
@@ -114,7 +107,7 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 
 	pClient, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
-		return fmt.Errorf("error creating provider client: %w", logHttpError(err))
+		return fmt.Errorf("error creating provider client: %w", err)
 	}
 
 	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
