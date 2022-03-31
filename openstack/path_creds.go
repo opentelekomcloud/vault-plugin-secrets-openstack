@@ -296,11 +296,11 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 			DomainID: user.Domain.ID,
 		}
 		if err := roles.Assign(client, role.ID, assignOpts).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot assign role `%s` to a temporary user: %w", role, err)
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", role, err)
 		}
 	}
 
-	groupsToAssign, err := filterGroups(client, user.Domain.ID, userGroups)
+	groupsToAssign, err := filterGroups(client, userGroups)
 	if err != nil {
 		return nil, err
 	}
@@ -349,14 +349,12 @@ func filterRoles(client *gophercloud.ServiceClient, roleNames []string) ([]roles
 	return filteredRoles, nil
 }
 
-func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames []string) ([]groups.Group, error) {
+func filterGroups(client *gophercloud.ServiceClient, groupNames []string) ([]groups.Group, error) {
 	if len(groupNames) == 0 {
 		return nil, nil
 	}
 
-	groupPages, err := groups.List(client, groups.ListOpts{
-		DomainID: domainID,
-	}).AllPages()
+	groupPages, err := groups.List(client, groups.ListOpts{}).AllPages()
 	if err != nil {
 		return nil, err
 	}
