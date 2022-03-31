@@ -25,6 +25,7 @@ type roleData struct {
 	Root        bool                   `json:"root"`
 	SecretType  string                 `json:"secret_type"`
 	UserGroups  []interface{}          `json:"user_groups"`
+	UserRoles   []interface{}          `json:"user_roles"`
 }
 
 func extractRoleData(t *testing.T, resp *http.Response) *roleData {
@@ -43,7 +44,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 
 	cloud := &openstack.OsCloud{
 		Name:           openstack.RandomString(openstack.NameDefaultSet, 10),
-		AuthURL:        "http://example.com/v3",
+		AuthURL:        "https://example.com/v3",
 		UserDomainName: openstack.RandomString(openstack.NameDefaultSet, 10),
 		Username:       openstack.RandomString(openstack.NameDefaultSet, 10),
 		Password:       openstack.RandomString(openstack.PwdDefaultSet, 10),
@@ -81,6 +82,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 			Root:        data["root"].(bool),
 			SecretType:  data["secret_type"].(string),
 			UserGroups:  data["user_groups"].([]interface{}),
+			UserRoles:   data["user_roles"].([]interface{}),
 		}
 		assert.Equal(t, expected, extractRoleData(t, resp))
 	})
@@ -121,6 +123,7 @@ func expectedRoleData(cloudName string) map[string]interface{} {
 		"root":         false,
 		"secret_type":  "token",
 		"user_groups":  []interface{}{},
+		"user_roles":   []interface{}{},
 	}
 	return expectedMap
 }
