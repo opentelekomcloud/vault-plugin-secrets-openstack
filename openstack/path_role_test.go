@@ -47,6 +47,7 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 		"root":         false,
 		"secret_type":  "token",
 		"user_groups":  []string{},
+		"user_roles":   []string{},
 	}
 	return expected, expectedMap
 }
@@ -315,7 +316,7 @@ func TestRoleCreate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 
 		b, s := testBackend(t)
-		cloudName := precreateCloud(t, s)
+		cloudName := preCreateCloud(t, s)
 
 		cases := map[string]*roleEntry{
 			"admin": {
@@ -329,6 +330,7 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
+				UserRoles:   []string{"member"},
 			},
 			"password": {
 				Name:        randomRoleName(),
@@ -336,6 +338,7 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
 				UserGroups:  []string{"default", "testing"},
+				UserRoles:   []string{"member"},
 			},
 			"ttl": {
 				Name:        randomRoleName(),
@@ -343,6 +346,7 @@ func TestRoleCreate(t *testing.T) {
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
+				UserRoles:   []string{"member"},
 				TTL:         24 * time.Hour,
 			},
 			"endpoint-override": {
@@ -392,7 +396,7 @@ func TestRoleCreate(t *testing.T) {
 		}
 
 		b, s := testBackend(t)
-		cloudName := precreateCloud(t, s)
+		cloudName := preCreateCloud(t, s)
 
 		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
@@ -417,6 +421,14 @@ func TestRoleCreate(t *testing.T) {
 					Cloud:      cloudName,
 					Root:       true,
 					UserGroups: []string{"ug-1"},
+				},
+				errorRegex: notForRootRe,
+			},
+			"root-user-roles": {
+				roleEntry: &roleEntry{
+					Cloud:     cloudName,
+					Root:      true,
+					UserRoles: []string{"ur-1"},
 				},
 				errorRegex: notForRootRe,
 			},
@@ -478,7 +490,7 @@ func TestRoleCreate(t *testing.T) {
 	})
 }
 
-func precreateCloud(t *testing.T, s logical.Storage) string {
+func preCreateCloud(t *testing.T, s logical.Storage) string {
 	t.Helper()
 
 	name := randomRoleName()
@@ -504,7 +516,7 @@ func TestRoleUpdate(t *testing.T) {
 	t.Parallel()
 
 	b, s := testBackend(t)
-	cloudName := precreateCloud(t, s)
+	cloudName := preCreateCloud(t, s)
 
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
