@@ -300,7 +300,7 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 		}
 	}
 
-	groupsToAssign, err := filterGroups(client, userGroups)
+	groupsToAssign, err := filterGroups(client, user.Domain.ID, userGroups)
 	if err != nil {
 		return nil, err
 	}
@@ -349,12 +349,14 @@ func filterRoles(client *gophercloud.ServiceClient, roleNames []string) ([]roles
 	return filteredRoles, nil
 }
 
-func filterGroups(client *gophercloud.ServiceClient, groupNames []string) ([]groups.Group, error) {
+func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames []string) ([]groups.Group, error) {
 	if len(groupNames) == 0 {
 		return nil, nil
 	}
 
-	groupPages, err := groups.List(client, groups.ListOpts{}).AllPages()
+	groupPages, err := groups.List(client, groups.ListOpts{
+		DomainID: domainID,
+	}).AllPages()
 	if err != nil {
 		return nil, err
 	}
