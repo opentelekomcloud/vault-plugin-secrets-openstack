@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -271,8 +273,6 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string, userGroups []string) (*users.User, error) {
-	log.Println("CREATE A USER")
 func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
 	token := tokens.Get(client, client.Token())
 	user, err := token.ExtractUser()
@@ -286,8 +286,6 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 	userCreateOpts := users.CreateOpts{
 		Name:        username,
 		Description: "Vault's temporary user",
-		DomainID:    user.Domain.ID,
-		Password:    password,
 		DomainID:    user.Domain.ID,
 		Password:    password,
 	}
