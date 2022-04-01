@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
@@ -117,7 +117,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	password := RandomString(PwdDefaultSet, 6)
-	user, err := createUser(client, password, role.UserGroups, role.UserRoles)
+	user, err := createUser(client, password, role)
 	if err != nil {
 		return nil, err
 	}
@@ -133,14 +133,10 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 			Scope:    *getScopeFromRole(role),
 		}
 
-		log.Printf("TOKEN OPTS FOR A TMP USER: %+v", tokenOpts)
-
 		token, err := createToken(client, tokenOpts)
 		if err != nil {
 			return nil, err
 		}
-
-		log.Printf("TOKEM FOR A TMP USER - OK: %+v", token.ExpiresAt)
 
 		data = map[string]interface{}{
 			"auth_url":   config.AuthURL,
@@ -273,45 +269,58 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
+func createUser(client *gophercloud.ServiceClient, password string, role *roleEntry) (*users.User, error) {
 	token := tokens.Get(client, client.Token())
 	user, err := token.ExtractUser()
 	if err != nil {
 		return nil, fmt.Errorf("error extracting the user from token: %w", err)
 	}
 
-	log.Printf("TOKEN INFO: %+v", token)
+	projectID := role.ProjectID
+	if projectID == "" && role.ProjectName != "" {
+		projectPages, err := projects.List(client, projects.ListOpts{Name: role.ProjectName}).AllPages()
+		if err != nil {
+			return nil, fmt.Errorf("unable to query projects: %w", err)
+		}
+
+		projectList, err := projects.ExtractProjects(projectPages)
+		if err != nil {
+			return nil, fmt.Errorf("uanble to retrive projects: %w", err)
+		}
+
+		projectID = projectList[0].ID
+	}
 
 	username := RandomString(NameDefaultSet, 6)
 	userCreateOpts := users.CreateOpts{
-		Name:        username,
-		Description: "Vault's temporary user",
-		DomainID:    user.Domain.ID,
-		Password:    password,
-	}
-	log.Printf("userCreateOpts: %+v", userCreateOpts)
-	newUser, err := users.Create(client, userCreateOpts).Extract()
-	log.Printf("newUser: %+v", newUser)
-	if err != nil {
-		return nil, fmt.Errorf("error creating a user: %w", err)
+		Name:             username,
+		DefaultProjectID: projectID,
+		Description:      "Vault's temporary user",
+		DomainID:         user.Domain.ID,
+		Password:         password,
 	}
 
-	rolesToAdd, err := filterRoles(client, userRoles)
+	newUser, err := users.Create(client, userCreateOpts).Extract()
+	if err != nil {
+		return nil, fmt.Errorf("error creating a temporary user: %w", err)
+	}
+
+	rolesToAdd, err := filterRoles(client, role.UserRoles)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, role := range rolesToAdd {
+	for _, identityRole := range rolesToAdd {
 		assignOpts := roles.AssignOpts{
-			UserID:   newUser.ID,
-			DomainID: user.Domain.ID,
+			UserID:    newUser.ID,
+			ProjectID: projectID,
 		}
-		if err := roles.Assign(client, role.ID, assignOpts).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", role, err)
+		if err := roles.Assign(client, identityRole.ID, assignOpts).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole, err)
 		}
 	}
 
-	groupsToAssign, err := filterGroups(client, user.Domain.ID, userGroups)
+	groupsToAssign, err := filterGroups(client, user.Domain.ID, role.UserGroups)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +335,6 @@ func createUser(client *gophercloud.ServiceClient, password string, userGroups, 
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
-	log.Println("CREATE A TOKEN")
 	token, err := tokens.Create(client, opts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a token: %w", err)

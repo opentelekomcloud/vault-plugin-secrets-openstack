@@ -279,6 +279,7 @@ func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, sType stri
 		"cloud":        testCloudName,
 		"ttl":          time.Hour / time.Second,
 		"project_name": tools.RandomString("p", 5),
+		"domain_name":  tools.RandomString("d", 5),
 		"root":         root,
 		"secret_type":  sType,
 	}

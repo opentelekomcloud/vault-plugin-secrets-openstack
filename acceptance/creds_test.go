@@ -28,6 +28,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 		DomainID   string
 		Root       bool
 		SecretType string
+		UserRoles  []string
 	}
 
 	cases := map[string]testCase{
@@ -43,6 +44,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			DomainID:   aux.DomainID,
 			Root:       false,
 			SecretType: "token",
+			UserRoles:  []string{"member"},
 		},
 		"user_password": {
 			Cloud:      cloud.Name,
@@ -69,7 +71,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			resp, err = p.vaultDo(
 				http.MethodPost,
 				roleURL(roleName),
-				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType),
+				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles),
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
@@ -123,13 +125,13 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	}
 }
 
-func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string) map[string]interface{} {
+func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string, userRoles []string) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
 		"cloud":       cloud,
 		"project_id":  projectID,
 		"domain_id":   domainID,
 		"root":        root,
 		"secret_type": secretType,
-		"groups":      []string{"mygroup"},
+		"user_roles":  userRoles,
 	})
 }

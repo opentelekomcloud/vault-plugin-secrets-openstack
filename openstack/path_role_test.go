@@ -37,12 +37,15 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 		Cloud:       cloudName,
 		TTL:         expTTL / time.Second,
 		ProjectName: tools.RandomString("p", 5),
+		DomainName:  tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
 		"cloud":        expected.Cloud,
 		"ttl":          expTTL,
 		"project_id":   "",
 		"project_name": expected.ProjectName,
+		"domain_id":    "",
+		"domain_name":  expected.DomainName,
 		"extensions":   map[string]string{},
 		"root":         false,
 		"secret_type":  "token",
