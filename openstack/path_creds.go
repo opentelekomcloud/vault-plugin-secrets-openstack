@@ -328,7 +328,7 @@ func filterRoles(client *gophercloud.ServiceClient, roleNames []string) ([]roles
 		return nil, nil
 	}
 
-	rolePages, err := roles.List(client, roles.ListOpts{}).AllPages()
+	rolePages, err := roles.List(client, nil).AllPages()
 	if err != nil {
 		return nil, fmt.Errorf("unable to query roles: %w", err)
 	}
@@ -343,6 +343,7 @@ func filterRoles(client *gophercloud.ServiceClient, roleNames []string) ([]roles
 		for _, role := range roleList {
 			if role.Name == name {
 				filteredRoles = append(filteredRoles, role)
+				break
 			}
 		}
 	}
@@ -371,6 +372,7 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 		for _, group := range groupList {
 			if group.Name == name {
 				filteredGroups = append(filteredGroups, group)
+				break
 			}
 		}
 	}
