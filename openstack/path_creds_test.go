@@ -23,6 +23,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
 	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{
 		TokenPost:   true,
+		TokenGet:    true,
 		TokenDelete: true,
 		UserPost:    true,
 		UserDelete:  true,
@@ -220,6 +221,7 @@ func TestCredentialsRevoke_error(t *testing.T) {
 			EnabledMocks: fixtures.EnabledMocks{
 				UserPost:  true,
 				TokenPost: true,
+				TokenGet:  true,
 			},
 			Root:        false,
 			ServiceType: "token",

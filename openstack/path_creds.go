@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -117,7 +119,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	password := RandomString(PwdDefaultSet, 6)
-	user, err := createUser(client, password)
+	user, err := createUser(client, password, role.UserGroups, role.UserRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -264,19 +266,52 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string) (*users.User, error) {
+func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
+	token := tokens.Get(client, client.Token())
+	user, err := token.ExtractUser()
+	if err != nil {
+		return nil, fmt.Errorf("error extracting the user from token: %w", err)
+	}
+
 	username := RandomString(NameDefaultSet, 6)
-	createOpts := users.CreateOpts{
+	userCreateOpts := users.CreateOpts{
 		Name:        username,
 		Description: "Vault's temporary user",
+		DomainID:    user.Domain.ID,
 		Password:    password,
 	}
-	user, err := users.Create(client, createOpts).Extract()
+	newUser, err := users.Create(client, userCreateOpts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a user: %w", err)
 	}
 
-	return user, nil
+	rolesToAdd, err := filterRoles(client, userRoles)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, role := range rolesToAdd {
+		assignOpts := roles.AssignOpts{
+			UserID:   newUser.ID,
+			DomainID: user.Domain.ID,
+		}
+		if err := roles.Assign(client, role.ID, assignOpts).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", role, err)
+		}
+	}
+
+	groupsToAssign, err := filterGroups(client, user.Domain.ID, userGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range groupsToAssign {
+		if err := users.AddToGroup(client, group.ID, newUser.ID).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot add a temporary user to a group `%s`: %w", group, err)
+		}
+	}
+
+	return newUser, nil
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
@@ -286,4 +321,60 @@ func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuild
 	}
 
 	return token, nil
+}
+
+func filterRoles(client *gophercloud.ServiceClient, roleNames []string) ([]roles.Role, error) {
+	if len(roleNames) == 0 {
+		return nil, nil
+	}
+
+	rolePages, err := roles.List(client, nil).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("unable to query roles: %w", err)
+	}
+
+	roleList, err := roles.ExtractRoles(rolePages)
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve roles: %w", err)
+	}
+
+	var filteredRoles []roles.Role
+	for _, name := range roleNames {
+		for _, role := range roleList {
+			if role.Name == name {
+				filteredRoles = append(filteredRoles, role)
+				break
+			}
+		}
+	}
+	return filteredRoles, nil
+}
+
+func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames []string) ([]groups.Group, error) {
+	if len(groupNames) == 0 {
+		return nil, nil
+	}
+
+	groupPages, err := groups.List(client, groups.ListOpts{
+		DomainID: domainID,
+	}).AllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	groupList, err := groups.ExtractGroups(groupPages)
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredGroups []groups.Group
+	for _, name := range groupNames {
+		for _, group := range groupList {
+			if group.Name == name {
+				filteredGroups = append(filteredGroups, group)
+				break
+			}
+		}
+	}
+	return filteredGroups, nil
 }
