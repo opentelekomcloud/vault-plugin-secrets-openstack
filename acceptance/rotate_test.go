@@ -28,7 +28,7 @@ func (p *PluginTest) makeChildCloud(base *openstack.OsCloud) *openstack.OsCloud 
 	user, err := users.Create(client, createUserOpts).Extract()
 	require.NoError(t, err)
 
-	rolePages, err := roles.List(client, roles.ListOpts{}).AllPages()
+	rolePages, err := roles.List(client, nil).AllPages()
 	require.NoError(t, err)
 
 	rolesToAssign, err := roles.ExtractRoles(rolePages)
