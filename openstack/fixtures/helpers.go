@@ -136,16 +136,53 @@ func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
 `, userID)
 }
 
+func handleProjectList(t *testing.T, w http.ResponseWriter, r *http.Request, projectName string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "GET")
+
+	w.Header().Add("Content-Type", "application/json")
+
+	_, _ = fmt.Fprintf(w, `
+{
+  "projects": [
+    {
+      "is_domain": false,
+      "description": "The team that is red",
+      "domain_id": "default",
+      "enabled": true,
+      "id": "1234",
+      "name": "%[1]s"
+    },
+    {
+      "is_domain": false,
+      "description": "The team that is blue",
+      "domain_id": "default",
+      "enabled": true,
+      "id": "9876",
+      "name": "Blue Team"
+    }
+  ],
+  "links": {
+    "next": null,
+    "previous": null
+  }
+}
+`, projectName)
+}
+
 type EnabledMocks struct {
 	TokenPost      bool
 	TokenGet       bool
 	TokenDelete    bool
 	PasswordChange bool
+	ProjectList    bool
 	UserPost       bool
 	UserDelete     bool
 }
 
-func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
+func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled EnabledMocks) {
 	t.Helper()
 
 	th.SetupHTTP()
@@ -175,6 +212,17 @@ func SetupKeystoneMock(t *testing.T, userID string, enabled EnabledMocks) {
 		case "POST":
 			if enabled.UserPost {
 				handleCreateUser(t, w, r, userID)
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	})
+
+	th.Mux.HandleFunc("/v3/projects", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			if enabled.ProjectList {
+				handleProjectList(t, w, r, projectName)
 			}
 		default:
 			w.WriteHeader(404)

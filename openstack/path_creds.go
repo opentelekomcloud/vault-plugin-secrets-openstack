@@ -12,6 +12,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
+	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -278,17 +279,21 @@ func createUser(client *gophercloud.ServiceClient, password string, role *roleEn
 
 	projectID := role.ProjectID
 	if projectID == "" && role.ProjectName != "" {
-		projectPages, err := projects.List(client, projects.ListOpts{Name: role.ProjectName}).AllPages()
-		if err != nil {
-			return nil, fmt.Errorf("unable to query projects: %w", err)
-		}
+		err := projects.List(client, projects.ListOpts{Name: role.ProjectName}).EachPage(func(page pagination.Page) (bool, error) {
+			project, err := projects.ExtractProjects(page)
+			if err != nil {
+				return false, err
+			}
+			if len(project) > 0 {
+				projectID = project[0].ID
+				return true, nil
+			}
 
-		projectList, err := projects.ExtractProjects(projectPages)
+			return false, fmt.Errorf("failed to find project with the name: %s", role.ProjectName)
+		})
 		if err != nil {
-			return nil, fmt.Errorf("uanble to retrive projects: %w", err)
+			return nil, err
 		}
-
-		projectID = projectList[0].ID
 	}
 
 	username := RandomString(NameDefaultSet, 6)

@@ -14,7 +14,8 @@ import (
 
 func TestRotateRootCredentials_ok(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
-	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{TokenPost: true, TokenGet: true, PasswordChange: true})
+	projectName := tools.RandomString("p", 5)
+	fixtures.SetupKeystoneMock(t, userID, projectName, fixtures.EnabledMocks{TokenPost: true, TokenGet: true, PasswordChange: true})
 
 	b, s := testBackend(t)
 
@@ -46,7 +47,8 @@ func TestRotateRootCredentials_error(t *testing.T) {
 
 	t.Run("read-fail", func(t *testing.T) {
 		userID, _ := uuid.GenerateUUID()
-		fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{})
+		projectName := tools.RandomString("p", 5)
+		fixtures.SetupKeystoneMock(t, userID, projectName, fixtures.EnabledMocks{})
 
 		b, s := testBackend(t, failVerbRead)
 
@@ -76,7 +78,8 @@ func TestRotateRootCredentials_error(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			data := data
 			userID, _ := uuid.GenerateUUID()
-			fixtures.SetupKeystoneMock(t, userID, data)
+			projectName := tools.RandomString("p", 5)
+			fixtures.SetupKeystoneMock(t, userID, projectName, data)
 
 			b, s := testBackend(t)
 
