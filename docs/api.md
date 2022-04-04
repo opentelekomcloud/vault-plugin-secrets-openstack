@@ -224,7 +224,7 @@ $ curl \
 ```
 
 #### Creating a role with endpoint override
-#FIXME: extensions check
+
 ```json
 {
   "cloud": "example-cloud",
@@ -241,7 +241,7 @@ $ curl \
 ```
 
 or 
-#FIXME: extensions check, this one should be!
+
 ```json
 {
   "cloud": "example-cloud",
