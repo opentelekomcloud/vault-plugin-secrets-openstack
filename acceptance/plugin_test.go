@@ -201,9 +201,10 @@ var (
 )
 
 type AuxiliaryData struct {
-	UserID    string
-	DomainID  string
-	ProjectID string
+	UserID      string
+	DomainID    string
+	ProjectID   string
+	ProjectName string
 }
 
 func openstackClient(t *testing.T) (*gophercloud.ServiceClient, *AuxiliaryData) {
@@ -220,9 +221,10 @@ func openstackClient(t *testing.T) (*gophercloud.ServiceClient, *AuxiliaryData) 
 	require.NoError(t, err)
 
 	aux := &AuxiliaryData{
-		UserID:    user.ID,
-		DomainID:  user.Domain.ID,
-		ProjectID: project.ID,
+		UserID:      user.ID,
+		DomainID:    user.Domain.ID,
+		ProjectID:   project.ID,
+		ProjectName: project.Name,
 	}
 	return client, aux
 }

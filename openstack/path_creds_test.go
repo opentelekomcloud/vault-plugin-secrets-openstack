@@ -21,9 +21,11 @@ func credsPath(name string) string {
 
 func TestCredentialsRead_ok(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
-	fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{
+	projectName := tools.RandomString("p", 5)
+	fixtures.SetupKeystoneMock(t, userID, projectName, fixtures.EnabledMocks{
 		TokenPost:   true,
 		TokenGet:    true,
+		ProjectList: true,
 		TokenDelete: true,
 		UserPost:    true,
 		UserDelete:  true,
@@ -45,7 +47,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	t.Run("root_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomRole(t, s, true, "token")
+		roleName := createSaveRandomRole(t, s, true, projectName, "token")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -59,7 +61,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	t.Run("user_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomRole(t, s, false, "token")
+		roleName := createSaveRandomRole(t, s, false, projectName, "token")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -72,7 +74,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	t.Run("user_password", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomRole(t, s, false, "password")
+		roleName := createSaveRandomRole(t, s, false, projectName, "password")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -85,7 +87,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	t.Run("token_revoke", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomRole(t, s, true, "token")
+		roleName := createSaveRandomRole(t, s, true, projectName, "token")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -107,7 +109,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 	t.Run("user_password_revoke", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomRole(t, s, false, "password")
+		roleName := createSaveRandomRole(t, s, false, projectName, "password")
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -132,11 +134,11 @@ func TestCredentialsRead_ok(t *testing.T) {
 func TestCredentialsRead_error(t *testing.T) {
 	t.Run("read-fail", func(t *testing.T) {
 		userID, _ := uuid.GenerateUUID()
-		fixtures.SetupKeystoneMock(t, userID, fixtures.EnabledMocks{})
+		fixtures.SetupKeystoneMock(t, userID, "", fixtures.EnabledMocks{})
 
 		b, s := testBackend(t, failVerbRead)
 
-		roleName := createSaveRandomRole(t, s, true, "token")
+		roleName := createSaveRandomRole(t, s, true, "", "token")
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Path:      credsPath(roleName),
@@ -149,6 +151,7 @@ func TestCredentialsRead_error(t *testing.T) {
 	type testCase struct {
 		EnabledMocks fixtures.EnabledMocks
 		Root         bool
+		ProjectName  string
 		ServiceType  string
 	}
 
@@ -158,6 +161,7 @@ func TestCredentialsRead_error(t *testing.T) {
 				TokenPost: true,
 			},
 			Root:        false,
+			ProjectName: tools.RandomString("p", 5),
 			ServiceType: "token",
 		},
 		"no-users-token-post": {
@@ -165,6 +169,7 @@ func TestCredentialsRead_error(t *testing.T) {
 				UserPost: true,
 			},
 			Root:        false,
+			ProjectName: tools.RandomString("p", 5),
 			ServiceType: "token",
 		},
 	}
@@ -173,11 +178,11 @@ func TestCredentialsRead_error(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			data := data
 			userID, _ := uuid.GenerateUUID()
-			fixtures.SetupKeystoneMock(t, userID, data.EnabledMocks)
+			fixtures.SetupKeystoneMock(t, userID, data.ProjectName, data.EnabledMocks)
 
 			b, s := testBackend(t)
 
-			roleName := createSaveRandomRole(t, s, data.Root, data.ServiceType)
+			roleName := createSaveRandomRole(t, s, data.Root, data.ProjectName, data.ServiceType)
 
 			testClient := thClient.ServiceClient()
 			authURL := testClient.Endpoint + "v3"
@@ -206,6 +211,7 @@ func TestCredentialsRevoke_error(t *testing.T) {
 	type testCase struct {
 		EnabledMocks fixtures.EnabledMocks
 		Root         bool
+		ProjectName  string
 		ServiceType  string
 	}
 
@@ -213,17 +219,20 @@ func TestCredentialsRevoke_error(t *testing.T) {
 		"no-token-delete": {
 			EnabledMocks: fixtures.EnabledMocks{
 				TokenPost: true,
+				TokenGet:  true,
 			},
 			Root:        true,
 			ServiceType: "token",
 		},
 		"no-user-delete": {
 			EnabledMocks: fixtures.EnabledMocks{
-				UserPost:  true,
-				TokenPost: true,
-				TokenGet:  true,
+				ProjectList: true,
+				UserPost:    true,
+				TokenPost:   true,
+				TokenGet:    true,
 			},
 			Root:        false,
+			ProjectName: tools.RandomString("p", 5),
 			ServiceType: "token",
 		},
 	}
@@ -232,11 +241,11 @@ func TestCredentialsRevoke_error(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			data := data
 			userID, _ := uuid.GenerateUUID()
-			fixtures.SetupKeystoneMock(t, userID, data.EnabledMocks)
+			fixtures.SetupKeystoneMock(t, userID, "", data.EnabledMocks)
 
 			b, s := testBackend(t)
 
-			roleName := createSaveRandomRole(t, s, data.Root, data.ServiceType)
+			roleName := createSaveRandomRole(t, s, data.Root, data.ProjectName, data.ServiceType)
 
 			testClient := thClient.ServiceClient()
 			authURL := testClient.Endpoint + "v3"
@@ -271,13 +280,14 @@ func TestCredentialsRevoke_error(t *testing.T) {
 	}
 }
 
-func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, sType string) string {
+func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, projectName, sType string) string {
 	roleName := randomRoleName()
 	role := map[string]interface{}{
 		"name":         roleName,
 		"cloud":        testCloudName,
 		"ttl":          time.Hour / time.Second,
-		"project_name": tools.RandomString("p", 5),
+		"project_name": projectName,
+		"domain_name":  tools.RandomString("d", 5),
 		"root":         root,
 		"secret_type":  sType,
 	}

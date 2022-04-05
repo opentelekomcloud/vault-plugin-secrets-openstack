@@ -8,9 +8,11 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
+	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -34,9 +36,9 @@ func secretToken(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "OpenStack Token.",
 			},
-			"role": {
+			"cloud": {
 				Type:        framework.TypeString,
-				Description: "Used role.",
+				Description: "Used cloud.",
 			},
 		},
 		Revoke: b.tokenRevoke,
@@ -51,9 +53,9 @@ func secretUser(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "User ID of temporary account.",
 			},
-			"role": {
+			"cloud": {
 				Type:        framework.TypeString,
-				Description: "Used role.",
+				Description: "Used cloud.",
 			},
 		},
 		Revoke: b.userDelete,
@@ -81,26 +83,22 @@ func (b *backend) pathCreds() *framework.Path {
 }
 
 func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
-	if role.SecretType != "token" {
+	if role.SecretType == SecretPassword {
 		return nil, errRootNotToken
 	}
 	tokenOpts := &tokens.AuthOptions{
 		Username:   config.Username,
 		Password:   config.Password,
 		DomainName: config.UserDomainName,
-		Scope: tokens.Scope{
-			DomainName:  config.UserDomainName,
-			ProjectName: role.ProjectName,
-			ProjectID:   role.ProjectID,
-		},
+		Scope:      *getScopeFromRole(role),
 	}
+
 	token, err := createToken(client, tokenOpts)
 	if err != nil {
 		return nil, err
 	}
 
 	data := map[string]interface{}{
-		"role":       role.Name,
 		"auth_url":   config.AuthURL,
 		"token":      token.ID,
 		"expires_at": token.ExpiresAt.String(),
@@ -112,6 +110,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 		},
 		InternalData: map[string]interface{}{
 			"secret_type": backendSecretTypeToken,
+			"cloud":       config.Name,
 		},
 	}
 	return &logical.Response{Data: data, Secret: secret}, nil
@@ -119,30 +118,28 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
 	password := RandomString(PwdDefaultSet, 6)
-	user, err := createUser(client, password, role.UserGroups, role.UserRoles)
+	user, err := createUser(client, password, role)
 	if err != nil {
 		return nil, err
 	}
 
 	var data map[string]interface{}
 	var secretInternal map[string]interface{}
-	if role.SecretType == "token" {
-		opts := &tokens.AuthOptions{
-			Username:   user.Name,
-			Password:   password,
-			DomainName: config.UserDomainName,
-			Scope: tokens.Scope{
-				ProjectID:   role.ProjectID,
-				ProjectName: role.ProjectName,
-				DomainID:    user.DomainID,
-			},
+	switch r := role.SecretType; r {
+	case SecretToken:
+		tokenOpts := &tokens.AuthOptions{
+			Username: user.Name,
+			Password: password,
+			DomainID: user.DomainID,
+			Scope:    *getScopeFromRole(role),
 		}
-		token, err := createToken(client, opts)
+
+		token, err := createToken(client, tokenOpts)
 		if err != nil {
 			return nil, err
 		}
+
 		data = map[string]interface{}{
-			"role":       role.Name,
 			"auth_url":   config.AuthURL,
 			"token":      token.ID,
 			"expires_at": token.ExpiresAt.String(),
@@ -150,10 +147,10 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
+			"cloud":       config.Name,
 		}
-	} else {
+	case SecretPassword:
 		data = map[string]interface{}{
-			"role":     role.Name,
 			"auth_url": config.AuthURL,
 			"username": user.Name,
 			"password": password,
@@ -172,8 +169,12 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, c
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
+			"cloud":       config.Name,
 		}
+	default:
+		return nil, fmt.Errorf("invalid secret type: %s", r)
 	}
+
 	return &logical.Response{
 		Data: data,
 		Secret: &logical.Secret{
@@ -207,6 +208,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 	if role.Root {
 		return getRootCredentials(client, role, cloudConfig)
 	}
+
 	return getTmpUserCredentials(client, role, cloudConfig)
 }
 
@@ -218,13 +220,14 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 
 	token := tokenRaw.(string)
 
-	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r.Storage)
-	if err != nil {
-		return nil, err
+	cloudNameRaw, ok := r.Secret.InternalData["cloud"]
+	if !ok {
+		return nil, errors.New("internal data 'cloud' not found")
 	}
 
-	sharedCloud := b.getSharedCloud(role.Cloud)
+	cloudName := cloudNameRaw.(string)
+
+	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err
@@ -238,7 +241,7 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 	return &logical.Response{}, nil
 }
 
-func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	userIDRaw, ok := r.Secret.InternalData["user_id"]
 	if !ok {
 		return nil, errors.New("internal data 'user_id' not found")
@@ -246,13 +249,14 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 
 	userID := userIDRaw.(string)
 
-	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r.Storage)
-	if err != nil {
-		return nil, err
+	cloudNameRaw, ok := r.Secret.InternalData["cloud"]
+	if !ok {
+		return nil, errors.New("internal data 'cloud' not found")
 	}
 
-	sharedCloud := b.getSharedCloud(role.Cloud)
+	cloudName := cloudNameRaw.(string)
+
+	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err
@@ -266,41 +270,62 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, d *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string, userGroups, userRoles []string) (*users.User, error) {
+func createUser(client *gophercloud.ServiceClient, password string, role *roleEntry) (*users.User, error) {
 	token := tokens.Get(client, client.Token())
 	user, err := token.ExtractUser()
 	if err != nil {
 		return nil, fmt.Errorf("error extracting the user from token: %w", err)
 	}
 
-	username := RandomString(NameDefaultSet, 6)
-	userCreateOpts := users.CreateOpts{
-		Name:        username,
-		Description: "Vault's temporary user",
-		DomainID:    user.Domain.ID,
-		Password:    password,
-	}
-	newUser, err := users.Create(client, userCreateOpts).Extract()
-	if err != nil {
-		return nil, fmt.Errorf("error creating a user: %w", err)
+	projectID := role.ProjectID
+	if projectID == "" && role.ProjectName != "" {
+		err := projects.List(client, projects.ListOpts{Name: role.ProjectName}).EachPage(func(page pagination.Page) (bool, error) {
+			project, err := projects.ExtractProjects(page)
+			if err != nil {
+				return false, err
+			}
+			if len(project) > 0 {
+				projectID = project[0].ID
+				return true, nil
+			}
+
+			return false, fmt.Errorf("failed to find project with the name: %s", role.ProjectName)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	rolesToAdd, err := filterRoles(client, userRoles)
+	username := RandomString(NameDefaultSet, 6)
+	userCreateOpts := users.CreateOpts{
+		Name:             username,
+		DefaultProjectID: projectID,
+		Description:      "Vault's temporary user",
+		DomainID:         user.Domain.ID,
+		Password:         password,
+	}
+
+	newUser, err := users.Create(client, userCreateOpts).Extract()
+	if err != nil {
+		return nil, fmt.Errorf("error creating a temporary user: %w", err)
+	}
+
+	rolesToAdd, err := filterRoles(client, role.UserRoles)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, role := range rolesToAdd {
+	for _, identityRole := range rolesToAdd {
 		assignOpts := roles.AssignOpts{
-			UserID:   newUser.ID,
-			DomainID: user.Domain.ID,
+			UserID:    newUser.ID,
+			ProjectID: projectID,
 		}
-		if err := roles.Assign(client, role.ID, assignOpts).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", role, err)
+		if err := roles.Assign(client, identityRole.ID, assignOpts).ExtractErr(); err != nil {
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole, err)
 		}
 	}
 
-	groupsToAssign, err := filterGroups(client, user.Domain.ID, userGroups)
+	groupsToAssign, err := filterGroups(client, user.Domain.ID, role.UserGroups)
 	if err != nil {
 		return nil, err
 	}
@@ -377,4 +402,29 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 		}
 	}
 	return filteredGroups, nil
+}
+
+func getScopeFromRole(role *roleEntry) *tokens.Scope {
+	switch {
+	case role.ProjectID != "":
+		return &tokens.Scope{
+			ProjectID: role.ProjectID,
+		}
+	case role.ProjectName != "":
+		return &tokens.Scope{
+			ProjectName: role.ProjectName,
+			DomainName:  role.DomainName,
+			DomainID:    role.DomainID,
+		}
+	case role.DomainID != "":
+		return &tokens.Scope{
+			DomainID: role.DomainID,
+		}
+	case role.DomainName != "":
+		return &tokens.Scope{
+			DomainName: role.DomainName,
+		}
+	default:
+		return nil
+	}
 }

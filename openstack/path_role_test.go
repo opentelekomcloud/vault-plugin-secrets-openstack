@@ -37,12 +37,15 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 		Cloud:       cloudName,
 		TTL:         expTTL / time.Second,
 		ProjectName: tools.RandomString("p", 5),
+		DomainName:  tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
 		"cloud":        expected.Cloud,
 		"ttl":          expTTL,
 		"project_id":   "",
 		"project_name": expected.ProjectName,
+		"domain_id":    "",
+		"domain_name":  expected.DomainName,
 		"extensions":   map[string]string{},
 		"root":         false,
 		"secret_type":  "token",
@@ -528,7 +531,7 @@ func TestRoleUpdate(t *testing.T) {
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      rolePath(roleName),
-			Data:      roleToMap(exp2),
+			Data:      fixtures.SanitizedMap(roleToMap(exp2)),
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -555,7 +558,7 @@ func fillRoleDefaultFields(b *backend, entry *roleEntry) {
 	pr := b.pathRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
-		entry.SecretType = secretType(flds["secret_type"].Default.(string))
+		entry.SecretType = flds["secret_type"].Default.(secretType)
 	}
 	if !entry.Root {
 		if entry.TTL == 0 {

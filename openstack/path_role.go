@@ -83,7 +83,7 @@ func (b *backend) pathRole() *framework.Path {
 				Type:          framework.TypeLowerCaseString,
 				Description:   "Specifies what kind of secret will configuration contain.",
 				AllowedValues: []interface{}{"token", "password"},
-				Default:       "token",
+				Default:       SecretToken,
 			},
 			"user_groups": {
 				Type:        framework.TypeCommaStringSlice,
@@ -92,7 +92,6 @@ func (b *backend) pathRole() *framework.Path {
 			"user_roles": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Specifies list of existing OpenStack roles this Vault role is allowed to assume.",
-				Default:     []string{"member"},
 			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
@@ -100,7 +99,15 @@ func (b *backend) pathRole() *framework.Path {
 			},
 			"project_name": {
 				Type:        framework.TypeNameString,
-				Description: "Specifies a project ID for project-scoped role.",
+				Description: "Specifies a project name for project-scoped role.",
+			},
+			"domain_id": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Specifies a domain ID for domain-scoped role.",
+			},
+			"domain_name": {
+				Type:        framework.TypeNameString,
+				Description: "Specifies a domain name for domain-scoped role.",
 			},
 			"extensions": {
 				Type: framework.TypeKVPairs,
@@ -153,6 +160,8 @@ type roleEntry struct {
 	UserRoles   []string          `json:"user_roles"`
 	ProjectID   string            `json:"project_id"`
 	ProjectName string            `json:"project_name"`
+	DomainID    string            `json:"domain_id"`
+	DomainName  string            `json:"domain_name"`
 	Extensions  map[string]string `json:"extensions"`
 }
 
@@ -200,6 +209,8 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"user_roles":   src.UserRoles,
 		"project_id":   src.ProjectID,
 		"project_name": src.ProjectName,
+		"domain_id":    src.DomainID,
+		"domain_name":  src.DomainName,
 		"extensions":   src.Extensions,
 	}
 }
@@ -266,7 +277,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
-		if entry.Root {
+		if entry.Root && typ != SecretToken {
 			return logical.ErrorResponse(errInvalidForRoot, "secret type"), nil
 		}
 		entry.SecretType = secretType(typ.(string))
@@ -280,6 +291,14 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 
 	if id, ok := d.GetOk("project_id"); ok {
 		entry.ProjectID = id.(string)
+	}
+
+	if name, ok := d.GetOk("domain_name"); ok {
+		entry.DomainName = name.(string)
+	}
+
+	if id, ok := d.GetOk("domain_id"); ok {
+		entry.DomainID = id.(string)
 	}
 
 	if ext, ok := d.GetOk("extensions"); ok {

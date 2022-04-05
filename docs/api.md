@@ -151,7 +151,7 @@ created. If the role exists, it will be updated with the new attributes.
 - `user_groups` `(list: [])` - Specifies list of existing OpenStack groups this Vault role is allowed to assume.
   This is a comma-separated string or JSON array.
 
-- `user_roles` `(list: ["member"])` - Specifies list of existing OpenStack roles this Vault role is allowed to assume.
+- `user_roles` `(list: [])` - Specifies list of existing OpenStack roles this Vault role is allowed to assume.
   This is a comma-separated string or JSON array.
 
 - `project_id` `(string: <optional>)` - Create a project-scoped role with given project ID. Mutually exclusive with
@@ -159,6 +159,12 @@ created. If the role exists, it will be updated with the new attributes.
 
 - `project_name` `(string: <optional>)` - Create a project-scoped role with given project name. Mutually exclusive with
   `project_id`.
+
+- `domain_id` `(string: <optional>)` - Create a domain-scoped role with given domain ID. Mutually exclusive with
+  `domain_name`.
+
+- `domain_name` `(string: <optional>)` - Create a domain-scoped role with given domain name. Mutually exclusive with
+  `domain_id`.
 
 When none of `project_name` or `project_id` is set, created role will have a project scope.
 
@@ -280,12 +286,10 @@ $ curl \
   "root": false,
   "secret_type": "password",
   "project_name": "test",
+  "domain_name": "test",
   "user_groups": [
     "default",
     "testing"
-  ],
-  "user_roles": [
-    "member"
   ],
   "ttl": "1h30m"
 }

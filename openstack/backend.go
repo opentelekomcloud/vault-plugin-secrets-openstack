@@ -100,12 +100,16 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		Username:         cloud.Username,
 		Password:         cloud.Password,
 		DomainName:       cloud.UserDomainName,
+		Scope: &gophercloud.AuthScope{
+			DomainName: cloud.UserDomainName,
+		},
 	}
 
 	pClient, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
 		return fmt.Errorf("error creating provider client: %w", err)
 	}
+
 	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
 	if err != nil {
 		return fmt.Errorf("error creating service client: %w", err)
