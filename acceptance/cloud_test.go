@@ -42,8 +42,7 @@ func (p *PluginTest) TestCloudLifecycle() {
 		"username":          tools.RandomString("us", 4),
 		"password":          tools.RandomString("", 15),
 		"user_domain_name":  "Default",
-		"username_template": tools.RandomString("t", 5),
-		"password_policy":   tools.RandomString("p", 5),
+		"username_template": "test{{ .RoleName }}{{ .CloudName }}",
 	}
 	cloudName := "test-write"
 
