@@ -57,10 +57,9 @@ rule "charset" {
 )
 
 var (
-	pluginCatalogEndpoint     = fmt.Sprintf("/v1/sys/plugins/catalog/secret/%s", pluginAlias)
-	pluginMountEndpoint       = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
-	pluginPwdPolicyEndpoint   = fmt.Sprintf("/v1/sys/policies/password/%s", policyAlias)
-	pluginPwdGenerateEndpoint = fmt.Sprintf("/v1/sys/policies/password/%s/generate", policyAlias)
+	pluginCatalogEndpoint   = fmt.Sprintf("/v1/sys/plugins/catalog/secret/%s", pluginAlias)
+	pluginMountEndpoint     = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
+	pluginPwdPolicyEndpoint = fmt.Sprintf("/v1/sys/policies/password/%s", policyAlias)
 
 	cloudBaseEndpoint = fmt.Sprintf("/v1/%s/cloud", pluginAlias)
 )

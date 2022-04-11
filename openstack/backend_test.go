@@ -3,7 +3,6 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
 	"net/http"
 	"sync"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	th "github.com/gophercloud/gophercloud/testhelper"
 	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
