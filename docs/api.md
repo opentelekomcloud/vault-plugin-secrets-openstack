@@ -29,7 +29,7 @@ will overwrite them.
   please refer to [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating).
   Additional fields available for the template are `.CloudName`, `.RoleName`.
 
-* `password_policy` `(string)` - Specifies a password policy to use when creating dynamic credentials. 
+* `password_policy` `(string)` - Specifies a password policy name to use when creating dynamic credentials. 
   Defaults to generating an alphanumeric password if not set. For details on password policies please refer
   to [Password Policies](https://www.vaultproject.io/docs/concepts/password-policies).
 

@@ -79,7 +79,7 @@ func (b *backend) pathCloud() *framework.Path {
 			},
 			"username_template": {
 				Type:        framework.TypeString,
-				Default:     "u{{random 8 | lowercase}}",
+				Default:     "vault{{random 8 | lowercase}}",
 				Description: "Name template for temporary generated users.",
 			},
 			"password": {
