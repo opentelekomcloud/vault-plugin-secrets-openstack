@@ -22,6 +22,8 @@ type sharedCloud struct {
 
 	client *gophercloud.ServiceClient
 	lock   sync.Mutex
+
+	passwords Passwords
 }
 
 type backend struct {
@@ -127,4 +129,5 @@ type OsCloud struct {
 	Username         string `json:"username"`
 	Password         string `json:"password"`
 	UsernameTemplate string `json:"username_template"`
+	PasswordPolicy   string `json:"password_policy"`
 }

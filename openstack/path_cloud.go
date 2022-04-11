@@ -90,6 +90,10 @@ func (b *backend) pathCloud() *framework.Path {
 					Sensitive: true,
 				},
 			},
+			"password_policy": {
+				Type:        framework.TypeString,
+				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
@@ -162,6 +166,14 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 			return logical.ErrorResponse("invalid username template: %s", err), nil
 		}
 	}
+	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
+		cloudConfig.PasswordPolicy = pwdPolicy.(string)
+	}
+
+	sCloud.passwords = Passwords{
+		PolicyGenerator: b.System(),
+		PolicyName:      cloudConfig.PasswordPolicy,
+	}
 
 	if err := cloudConfig.save(ctx, r.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -187,6 +199,7 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 			"username":          cloudConfig.Username,
 			"password":          cloudConfig.Password,
 			"username_template": cloudConfig.UsernameTemplate,
+			"password_policy":   cloudConfig.PasswordPolicy,
 		},
 	}, nil
 }
