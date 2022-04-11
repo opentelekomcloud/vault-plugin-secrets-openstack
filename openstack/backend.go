@@ -66,9 +66,14 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func (b *backend) getSharedCloud(name string) *sharedCloud {
 	if c, ok := b.clouds[name]; ok {
+		if c.passwords == nil {
+			c.passwords = &Passwords{
+				PolicyGenerator: b.System(),
+			}
+		}
 		return c
 	}
-	cloud := &sharedCloud{name: name}
+	cloud := &sharedCloud{name: name, passwords: &Passwords{PolicyGenerator: b.System()}}
 	if b.clouds == nil {
 		b.clouds = make(map[string]*sharedCloud)
 	}
