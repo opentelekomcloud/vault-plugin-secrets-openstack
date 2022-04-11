@@ -242,11 +242,12 @@ func openstackCloudConfig(t *testing.T) *openstack.OsCloud {
 	require.NoError(t, err)
 
 	return &openstack.OsCloud{
-		Name:           cloudName,
-		AuthURL:        cloud.AuthInfo.AuthURL,
-		UserDomainName: getDomainName(cloud.AuthInfo),
-		Username:       cloud.AuthInfo.Username,
-		Password:       cloud.AuthInfo.Password,
+		Name:             cloudName,
+		AuthURL:          cloud.AuthInfo.AuthURL,
+		UserDomainName:   getDomainName(cloud.AuthInfo),
+		Username:         cloud.AuthInfo.Username,
+		Password:         cloud.AuthInfo.Password,
+		UsernameTemplate: "vault-{{ .RoleName }}-{{ random 4 }}",
 	}
 }
 

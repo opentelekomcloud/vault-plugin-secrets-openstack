@@ -117,11 +117,13 @@ func credsURL(roleName string) string {
 
 func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	return map[string]interface{}{
-		"name":             cloud.Name,
-		"auth_url":         cloud.AuthURL,
-		"username":         cloud.Username,
-		"password":         cloud.Password,
-		"user_domain_name": cloud.UserDomainName,
+		"name":              cloud.Name,
+		"auth_url":          cloud.AuthURL,
+		"username":          cloud.Username,
+		"password":          cloud.Password,
+		"user_domain_name":  cloud.UserDomainName,
+		"username_template": cloud.UsernameTemplate,
+		"password_policy":   cloud.PasswordPolicy,
 	}
 }
 

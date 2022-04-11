@@ -15,10 +15,12 @@ import (
 )
 
 type cloudData struct {
-	AuthURL        string `json:"auth_url"`
-	UserDomainName string `json:"user_domain_name"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
+	AuthURL          string `json:"auth_url"`
+	UserDomainName   string `json:"user_domain_name"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	UsernameTemplate string `json:"username_template"`
+	PasswordPolicy   string `json:"password_policy"`
 }
 
 func extractCloudData(t *testing.T, resp *http.Response) *cloudData {
@@ -36,10 +38,12 @@ func (p *PluginTest) TestCloudLifecycle() {
 	t := p.T()
 
 	data := map[string]interface{}{
-		"auth_url":         "https://example.com/v3/",
-		"username":         tools.RandomString("us", 4),
-		"password":         tools.RandomString("", 15),
-		"user_domain_name": "Default",
+		"auth_url":          "https://example.com/v3/",
+		"username":          tools.RandomString("us", 4),
+		"password":          tools.RandomString("", 15),
+		"user_domain_name":  "Default",
+		"username_template": tools.RandomString("t", 5),
+		"password_policy":   tools.RandomString("p", 5),
 	}
 	cloudName := "test-write"
 
@@ -63,10 +67,12 @@ func (p *PluginTest) TestCloudLifecycle() {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		expected := &cloudData{
-			AuthURL:        data["auth_url"].(string),
-			UserDomainName: data["user_domain_name"].(string),
-			Username:       data["username"].(string),
-			Password:       data["password"].(string),
+			AuthURL:          data["auth_url"].(string),
+			UserDomainName:   data["user_domain_name"].(string),
+			Username:         data["username"].(string),
+			Password:         data["password"].(string),
+			UsernameTemplate: data["username_template"].(string),
+			PasswordPolicy:   data["password_policy"].(string),
 		}
 		assert.Equal(t, expected, extractCloudData(t, resp))
 	})
