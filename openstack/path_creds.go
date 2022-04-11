@@ -117,7 +117,10 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 }
 
 func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
-	password := RandomString(PwdDefaultSet, 6)
+	password, err := generatePassword(12, 2, 4, 2, 2)
+	if err != nil {
+		return nil, err
+	}
 	user, err := createUser(client, password, role)
 	if err != nil {
 		return nil, err
@@ -296,7 +299,7 @@ func createUser(client *gophercloud.ServiceClient, password string, role *roleEn
 		}
 	}
 
-	username := RandomString(NameDefaultSet, 6)
+	username := RandomStringWithPrefix("vault", NameDefaultSet, 6)
 	userCreateOpts := users.CreateOpts{
 		Name:             username,
 		DefaultProjectID: projectID,
