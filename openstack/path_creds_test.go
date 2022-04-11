@@ -36,11 +36,12 @@ func TestCredentialsRead_ok(t *testing.T) {
 
 	b, s := testBackend(t)
 	cloudEntry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
-		Name:           testCloudName,
-		AuthURL:        authURL,
-		UserDomainName: testUserDomainName,
-		Username:       testUsername,
-		Password:       testPassword1,
+		Name:             testCloudName,
+		AuthURL:          authURL,
+		UserDomainName:   testUserDomainName,
+		Username:         testUsername,
+		Password:         testPassword1,
+		UsernameTemplate: testTemplate1,
 	})
 	require.NoError(t, err)
 
@@ -117,6 +118,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 			Storage:   s,
 		})
 		require.NoError(t, err)
+		require.False(t, res.IsError(), res.Error())
 		require.NotEmpty(t, res.Data)
 		require.NotEmpty(t, res.Data["password"])
 		require.NotEmpty(t, res.Secret.InternalData["user_id"])
@@ -188,11 +190,12 @@ func TestCredentialsRead_error(t *testing.T) {
 			authURL := testClient.Endpoint + "v3"
 
 			cloudEntry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
-				Name:           testCloudName,
-				AuthURL:        authURL,
-				UserDomainName: testUserDomainName,
-				Username:       testUsername,
-				Password:       testPassword1,
+				Name:             testCloudName,
+				AuthURL:          authURL,
+				UserDomainName:   testUserDomainName,
+				Username:         testUsername,
+				Password:         testPassword1,
+				UsernameTemplate: testTemplate1,
 			})
 			require.NoError(t, err)
 			require.NoError(t, s.Put(context.Background(), cloudEntry))

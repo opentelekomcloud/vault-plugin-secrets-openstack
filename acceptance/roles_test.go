@@ -43,11 +43,12 @@ func (p *PluginTest) TestRoleLifecycle() {
 	t := p.T()
 
 	cloud := &openstack.OsCloud{
-		Name:           openstack.RandomString(openstack.NameDefaultSet, 10),
-		AuthURL:        "https://example.com/v3",
-		UserDomainName: openstack.RandomString(openstack.NameDefaultSet, 10),
-		Username:       openstack.RandomString(openstack.NameDefaultSet, 10),
-		Password:       openstack.RandomString(openstack.PwdDefaultSet, 10),
+		Name:             openstack.RandomString(openstack.NameDefaultSet, 10),
+		AuthURL:          "https://example.com/v3",
+		UserDomainName:   openstack.RandomString(openstack.NameDefaultSet, 10),
+		Username:         openstack.RandomString(openstack.NameDefaultSet, 10),
+		Password:         openstack.RandomString(openstack.PwdDefaultSet, 10),
+		UsernameTemplate: "u-{{ .RoleName }}-{{ random 4 }}",
 	}
 	p.makeCloud(cloud)
 

@@ -121,9 +121,10 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 }
 
 type OsCloud struct {
-	Name           string `json:"name"`
-	AuthURL        string `json:"auth_url"`
-	UserDomainName string `json:"user_domain_name"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
+	Name             string `json:"name"`
+	AuthURL          string `json:"auth_url"`
+	UserDomainName   string `json:"user_domain_name"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	UsernameTemplate string `json:"username_template"`
 }

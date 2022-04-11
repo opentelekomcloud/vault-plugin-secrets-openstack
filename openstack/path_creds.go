@@ -116,9 +116,14 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, config *OsCloud) (*logical.Response, error) {
+func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, usernameTemplate string, config *OsCloud) (*logical.Response, error) {
 	password := RandomString(PwdDefaultSet, 6)
-	user, err := createUser(client, password, role)
+	username, err := RandomTemporaryUsername(usernameTemplate, role)
+	if err != nil {
+		return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
+	}
+
+	user, err := createUser(client, username, password, role)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +214,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return getRootCredentials(client, role, cloudConfig)
 	}
 
-	return getTmpUserCredentials(client, role, cloudConfig)
+	return getTmpUserCredentials(client, role, cloudConfig.UsernameTemplate, cloudConfig)
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -270,7 +275,7 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 	return &logical.Response{}, nil
 }
 
-func createUser(client *gophercloud.ServiceClient, password string, role *roleEntry) (*users.User, error) {
+func createUser(client *gophercloud.ServiceClient, username, password string, role *roleEntry) (*users.User, error) {
 	token := tokens.Get(client, client.Token())
 	user, err := token.ExtractUser()
 	if err != nil {
@@ -296,7 +301,6 @@ func createUser(client *gophercloud.ServiceClient, password string, role *roleEn
 		}
 	}
 
-	username := RandomString(NameDefaultSet, 6)
 	userCreateOpts := users.CreateOpts{
 		Name:             username,
 		DefaultProjectID: projectID,
