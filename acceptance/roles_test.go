@@ -62,7 +62,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 			data,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 	})
 
 	t.Run("ReadRole", func(t *testing.T) {
@@ -106,7 +106,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 			nil,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 }
 

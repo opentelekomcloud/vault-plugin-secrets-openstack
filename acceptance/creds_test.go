@@ -91,7 +91,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles),
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 
 			resp, err = p.vaultDo(
 				http.MethodGet,
@@ -115,7 +115,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			assertStatusCode(t, http.StatusOK, resp)
+			assertStatusCode(t, http.StatusNoContent, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodDelete,
