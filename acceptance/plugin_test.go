@@ -29,11 +29,38 @@ import (
 const (
 	pluginBin   = "vault-plugin-secrets-openstack"
 	pluginAlias = "openstack"
+
+	policyAlias = "openstack-policy"
+
+	pwdPolicy = `
+length=20
+
+rule "charset" {
+  charset = "abcdefghijklmnopqrstuvwxyz"
+  min-chars = 1
+}
+
+rule "charset" {
+  charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  min-chars = 1
+}
+
+rule "charset" {
+  charset = "0123456789"
+  min-chars = 1
+}
+
+rule "charset" {
+  charset = "!@#$%^&*"
+  min-chars = 1
+}`
 )
 
 var (
-	pluginCatalogEndpoint = fmt.Sprintf("/v1/sys/plugins/catalog/secret/%s", pluginAlias)
-	pluginMountEndpoint   = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
+	pluginCatalogEndpoint     = fmt.Sprintf("/v1/sys/plugins/catalog/secret/%s", pluginAlias)
+	pluginMountEndpoint       = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
+	pluginPwdPolicyEndpoint   = fmt.Sprintf("/v1/sys/policies/password/%s", policyAlias)
+	pluginPwdGenerateEndpoint = fmt.Sprintf("/v1/sys/policies/password/%s/generate", policyAlias)
 
 	cloudBaseEndpoint = fmt.Sprintf("/v1/%s/cloud", pluginAlias)
 )
@@ -248,6 +275,7 @@ func openstackCloudConfig(t *testing.T) *openstack.OsCloud {
 		Username:         cloud.AuthInfo.Username,
 		Password:         cloud.AuthInfo.Password,
 		UsernameTemplate: "vault-{{ .RoleName }}-{{ random 4 }}",
+		PasswordPolicy:   "openstack-policy",
 	}
 }
 

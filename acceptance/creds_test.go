@@ -58,9 +58,26 @@ func (p *PluginTest) TestCredsLifecycle() {
 	for name, data := range cases {
 		t.Run(name, func(t *testing.T) {
 			data := data
-			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
 			resp, err := p.vaultDo(
+				http.MethodPost,
+				pluginPwdPolicyEndpoint,
+				map[string]interface{}{
+					"policy": pwdPolicy,
+				},
+			)
+			require.NoError(t, err)
+
+			resp, err = p.vaultDo(
+				http.MethodGet,
+				pluginPwdGenerateEndpoint,
+				nil,
+			)
+			require.NoError(t, err)
+
+			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
+
+			resp, err = p.vaultDo(
 				http.MethodPost,
 				cloudURL(cloudName),
 				cloudToCloudMap(cloud),

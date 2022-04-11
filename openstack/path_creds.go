@@ -116,7 +116,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, role *roleEntry, conf
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, usernameTemplate string, pwdGenerator Passwords, config *OsCloud) (*logical.Response, error) {
+func getTmpUserCredentials(client *gophercloud.ServiceClient, role *roleEntry, usernameTemplate string, pwdGenerator *Passwords, config *OsCloud) (*logical.Response, error) {
 	password, err := pwdGenerator.Generate(context.Background())
 	if err != nil {
 		return nil, err

@@ -170,7 +170,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 		cloudConfig.PasswordPolicy = pwdPolicy.(string)
 	}
 
-	sCloud.passwords = Passwords{
+	sCloud.passwords = &Passwords{
 		PolicyGenerator: b.System(),
 		PolicyName:      cloudConfig.PasswordPolicy,
 	}

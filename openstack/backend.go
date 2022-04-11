@@ -23,7 +23,7 @@ type sharedCloud struct {
 	client *gophercloud.ServiceClient
 	lock   sync.Mutex
 
-	passwords Passwords
+	passwords *Passwords
 }
 
 type backend struct {
@@ -32,7 +32,7 @@ type backend struct {
 	clouds map[string]*sharedCloud
 }
 
-func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := new(backend)
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -56,6 +56,11 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 		},
 		BackendType: logical.TypeLogical,
 	}
+
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 
