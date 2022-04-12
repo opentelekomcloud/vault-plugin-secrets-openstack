@@ -244,7 +244,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 	if cld == nil {
-		return logical.ErrorResponse("cloud `%s` doesn't exist"), nil
+		return logical.ErrorResponse("cloud `%s` doesn't exist", cloudName), nil
 	}
 
 	name := d.Get("name").(string)
@@ -323,7 +323,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	return &logical.Response{}, nil
+	return nil, nil
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -338,7 +338,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 	}
 
 	err = req.Storage.Delete(ctx, roleStoragePath(name))
-	return &logical.Response{}, err
+	return nil, err
 }
 
 func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

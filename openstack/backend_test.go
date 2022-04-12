@@ -12,6 +12,7 @@ import (
 	th "github.com/gophercloud/gophercloud/testhelper"
 	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,24 +45,29 @@ func testBackend(t *testing.T, fvs ...failVerb) (*backend, logical.Storage) {
 
 	config := logical.TestBackendConfig()
 	config.StorageView = storageView
+	config.System = logical.TestSystemView()
 	config.Logger = hclog.NewNullLogger()
 
 	b, err := Factory(context.Background(), config)
 	assert.NoError(t, err)
+
+	assert.NoError(t, b.Setup(context.Background(), config))
 
 	return b.(*backend), config.StorageView
 }
 
 func TestBackend_sharedCloud(t *testing.T) {
 	expected := &sharedCloud{
-		client: new(gophercloud.ServiceClient),
-		lock:   sync.Mutex{},
+		client:    new(gophercloud.ServiceClient),
+		passwords: new(Passwords),
+		lock:      sync.Mutex{},
 	}
 	cloudKey := tools.RandomString("cl", 5)
 	back := backend{
 		clouds: map[string]*sharedCloud{
 			cloudKey: expected,
 		},
+		Backend: &framework.Backend{},
 	}
 
 	t.Run("existing", func(t *testing.T) {

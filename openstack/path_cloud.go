@@ -77,6 +77,11 @@ func (b *backend) pathCloud() *framework.Path {
 				Required:    true,
 				Description: "OpenStack username of the root user.",
 			},
+			"username_template": {
+				Type:        framework.TypeString,
+				Default:     "vault{{random 8 | lowercase}}",
+				Description: "Name template for temporary generated users.",
+			},
 			"password": {
 				Type:        framework.TypeString,
 				Required:    true,
@@ -84,6 +89,10 @@ func (b *backend) pathCloud() *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: true,
 				},
+			},
+			"password_policy": {
+				Type:        framework.TypeString,
+				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -149,6 +158,22 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 	if password, ok := d.GetOk("password"); ok {
 		cloudConfig.Password = password.(string)
 	}
+	if uTemplate, ok := d.GetOk("username_template"); ok {
+		cloudConfig.UsernameTemplate = uTemplate.(string)
+		// validate template first
+		_, err := RandomTemporaryUsername(cloudConfig.UsernameTemplate, &roleEntry{})
+		if err != nil {
+			return logical.ErrorResponse("invalid username template: %s", err), nil
+		}
+	}
+	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
+		cloudConfig.PasswordPolicy = pwdPolicy.(string)
+	}
+
+	sCloud.passwords = &Passwords{
+		PolicyGenerator: b.System(),
+		PolicyName:      cloudConfig.PasswordPolicy,
+	}
 
 	if err := cloudConfig.save(ctx, r.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -169,10 +194,12 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"auth_url":         cloudConfig.AuthURL,
-			"user_domain_name": cloudConfig.UserDomainName,
-			"username":         cloudConfig.Username,
-			"password":         cloudConfig.Password,
+			"auth_url":          cloudConfig.AuthURL,
+			"user_domain_name":  cloudConfig.UserDomainName,
+			"username":          cloudConfig.Username,
+			"password":          cloudConfig.Password,
+			"username_template": cloudConfig.UsernameTemplate,
+			"password_policy":   cloudConfig.PasswordPolicy,
 		},
 	}, nil
 }

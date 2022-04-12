@@ -22,6 +22,8 @@ type sharedCloud struct {
 
 	client *gophercloud.ServiceClient
 	lock   sync.Mutex
+
+	passwords *Passwords
 }
 
 type backend struct {
@@ -30,7 +32,7 @@ type backend struct {
 	clouds map[string]*sharedCloud
 }
 
-func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := new(backend)
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -54,14 +56,23 @@ func Factory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, erro
 		},
 		BackendType: logical.TypeLogical,
 	}
+
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 
 func (b *backend) getSharedCloud(name string) *sharedCloud {
+	passwords := &Passwords{PolicyGenerator: b.System()}
 	if c, ok := b.clouds[name]; ok {
+		if c.passwords == nil {
+			c.passwords = passwords
+		}
 		return c
 	}
-	cloud := &sharedCloud{name: name}
+	cloud := &sharedCloud{name: name, passwords: passwords}
 	if b.clouds == nil {
 		b.clouds = make(map[string]*sharedCloud)
 	}
@@ -121,9 +132,11 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 }
 
 type OsCloud struct {
-	Name           string `json:"name"`
-	AuthURL        string `json:"auth_url"`
-	UserDomainName string `json:"user_domain_name"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
+	Name             string `json:"name"`
+	AuthURL          string `json:"auth_url"`
+	UserDomainName   string `json:"user_domain_name"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	UsernameTemplate string `json:"username_template"`
+	PasswordPolicy   string `json:"password_policy"`
 }

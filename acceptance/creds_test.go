@@ -58,6 +58,16 @@ func (p *PluginTest) TestCredsLifecycle() {
 	for name, data := range cases {
 		t.Run(name, func(t *testing.T) {
 			data := data
+
+			_, err := p.vaultDo(
+				http.MethodPost,
+				pluginPwdPolicyEndpoint,
+				map[string]interface{}{
+					"policy": pwdPolicy,
+				},
+			)
+			require.NoError(t, err)
+
 			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
 			resp, err := p.vaultDo(
@@ -74,7 +84,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles),
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 
 			resp, err = p.vaultDo(
 				http.MethodGet,
@@ -98,7 +108,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			assertStatusCode(t, http.StatusOK, resp)
+			assertStatusCode(t, http.StatusNoContent, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodDelete,
@@ -117,11 +127,13 @@ func credsURL(roleName string) string {
 
 func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	return map[string]interface{}{
-		"name":             cloud.Name,
-		"auth_url":         cloud.AuthURL,
-		"username":         cloud.Username,
-		"password":         cloud.Password,
-		"user_domain_name": cloud.UserDomainName,
+		"name":              cloud.Name,
+		"auth_url":          cloud.AuthURL,
+		"username":          cloud.Username,
+		"password":          cloud.Password,
+		"user_domain_name":  cloud.UserDomainName,
+		"username_template": cloud.UsernameTemplate,
+		"password_policy":   cloud.PasswordPolicy,
 	}
 }
 

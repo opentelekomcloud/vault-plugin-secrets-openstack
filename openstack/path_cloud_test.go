@@ -2,9 +2,10 @@ package openstack
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,6 +19,10 @@ var (
 	testUserDomainName = tools.RandomString("domain", 3)
 	testPassword1      = tools.RandomString("password1", 3)
 	testPassword2      = tools.RandomString("password2", 3)
+	testTemplate1      = "asdf{{random 4}}"
+	testTemplate2      = "u-{{ .RoleName }}-{{ random 5 }}"
+	testPolicy1        = "default"
+	testPolicy2        = "openstack"
 )
 
 func TestCloudCreate(t *testing.T) {
@@ -41,11 +46,13 @@ func TestCloudCreate(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Path:      pathCloudKey(testCloudName),
 			Data: map[string]interface{}{
-				"name":             testCloudName,
-				"auth_url":         testAuthURL,
-				"user_domain_name": testUserDomainName,
-				"username":         testUsername,
-				"password":         testPassword1,
+				"name":              testCloudName,
+				"auth_url":          testAuthURL,
+				"user_domain_name":  testUserDomainName,
+				"username":          testUsername,
+				"password":          testPassword1,
+				"username_template": testTemplate1,
+				"password_policy":   testPolicy1,
 			},
 		})
 		require.NoError(t, err)
@@ -58,17 +65,20 @@ func TestCloudCreate(t *testing.T) {
 		assert.Equal(t, cloudConfig.Username, testUsername)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
 		assert.Equal(t, cloudConfig.Name, testCloudName)
+		assert.Equal(t, cloudConfig.PasswordPolicy, testPolicy1)
 	})
 
 	t.Run("Update", func(t *testing.T) {
 		b, storage := testBackend(t)
 
 		entry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
-			Name:           testCloudName,
-			AuthURL:        testAuthURL,
-			UserDomainName: testUserDomainName,
-			Username:       testUsername,
-			Password:       testPassword1,
+			Name:             testCloudName,
+			AuthURL:          testAuthURL,
+			UserDomainName:   testUserDomainName,
+			Username:         testUsername,
+			Password:         testPassword1,
+			UsernameTemplate: testTemplate1,
+			PasswordPolicy:   testPolicy1,
 		})
 		require.NoError(t, err)
 		require.NoError(t, storage.Put(context.Background(), entry))
@@ -78,16 +88,21 @@ func TestCloudCreate(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, cloudConfig.AuthURL, testAuthURL)
 		assert.Equal(t, cloudConfig.Password, testPassword1)
+		assert.Equal(t, cloudConfig.UsernameTemplate, testTemplate1)
+		assert.Equal(t, cloudConfig.PasswordPolicy, testPolicy1)
 
-		_, err = b.HandleRequest(context.Background(), &logical.Request{
+		r, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   storage,
 			Operation: logical.UpdateOperation,
 			Path:      pathCloudKey(testCloudName),
 			Data: map[string]interface{}{
-				"password": testPassword2,
+				"password":          testPassword2,
+				"username_template": testTemplate2,
+				"password_policy":   testPolicy2,
 			},
 		})
 		require.NoError(t, err)
+		require.False(t, r.IsError(), "update failed: %s", r.Error())
 
 		cloudConfig, err = sCloud.getCloudConfig(context.Background(), storage)
 		require.NoError(t, err)
@@ -96,6 +111,8 @@ func TestCloudCreate(t *testing.T) {
 		assert.Equal(t, cloudConfig.Username, testUsername)
 		assert.Equal(t, cloudConfig.Password, testPassword2)
 		assert.Equal(t, cloudConfig.Name, testCloudName)
+		assert.Equal(t, cloudConfig.UsernameTemplate, testTemplate2)
+		assert.Equal(t, cloudConfig.PasswordPolicy, testPolicy2)
 	})
 
 	t.Run("Read", func(t *testing.T) {

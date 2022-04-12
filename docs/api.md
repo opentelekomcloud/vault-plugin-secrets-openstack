@@ -25,6 +25,14 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
+* `username_template` `(string)` - Template used for usernames of temporary users. For details on templating syntax
+  please refer to [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating).
+  Additional fields available for the template are `.CloudName`, `.RoleName`.
+
+* `password_policy` `(string)` - Specifies a password policy name to use when creating dynamic credentials. 
+  Defaults to generating an alphanumeric password if not set. For details on password policies please refer
+  to [Password Policies](https://www.vaultproject.io/docs/concepts/password-policies).
+
 ### Sample Payload
 
 ```json
@@ -32,7 +40,8 @@ will overwrite them.
   "auth_url": "https://example.com/v3/",
   "username": "admin",
   "password": "RcigTiYrJjVmEkrV71Cd",
-  "user_domain_name": "Default"
+  "user_domain_name": "Default",
+  "username_template": "user-{{ .RoleName }}-{{ random 4 }}"
 }
 ```
 

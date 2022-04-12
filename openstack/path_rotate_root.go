@@ -32,16 +32,6 @@ func (b *backend) pathRotateRoot() *framework.Path {
 				Required:    true,
 				Description: "Specifies name of the cloud which credentials will be rotated.",
 			},
-			"size": {
-				Type:        framework.TypeInt,
-				Description: "Specifies the new password length.",
-				Default:     16,
-			},
-			"charset": {
-				Type:        framework.TypeString,
-				Description: "Specifies the new password character set.",
-				Default:     PwdDefaultSet,
-			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -71,10 +61,10 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	newPassword := RandomString(
-		d.Get("charset").(string),
-		d.Get("size").(int),
-	)
+	newPassword, err := sharedCloud.passwords.Generate(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// make sure we don't use this cloud until the password is changed
 	sharedCloud.lock.Lock()
