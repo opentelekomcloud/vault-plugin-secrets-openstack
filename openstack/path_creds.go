@@ -97,7 +97,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 		Username:   opts.Config.Username,
 		Password:   opts.Config.Password,
 		DomainName: opts.Config.UserDomainName,
-		Scope:      *getScopeFromRole(opts.Role),
+		Scope:      getScopeFromRole(opts.Role),
 	}
 
 	token, err := createToken(client, tokenOpts)
@@ -147,7 +147,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 			Username: user.Name,
 			Password: password,
 			DomainID: user.DomainID,
-			Scope:    *getScopeFromRole(opts.Role),
+			Scope:    getScopeFromRole(opts.Role),
 		}
 
 		token, err := createToken(client, tokenOpts)
@@ -426,27 +426,27 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 	return filteredGroups, nil
 }
 
-func getScopeFromRole(role *roleEntry) *tokens.Scope {
+func getScopeFromRole(role *roleEntry) tokens.Scope {
 	switch {
 	case role.ProjectID != "":
-		return &tokens.Scope{
+		return tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
 	case role.ProjectName != "":
-		return &tokens.Scope{
+		return tokens.Scope{
 			ProjectName: role.ProjectName,
 			DomainName:  role.DomainName,
 			DomainID:    role.DomainID,
 		}
 	case role.DomainID != "":
-		return &tokens.Scope{
+		return tokens.Scope{
 			DomainID: role.DomainID,
 		}
 	case role.DomainName != "":
-		return &tokens.Scope{
+		return tokens.Scope{
 			DomainName: role.DomainName,
 		}
 	default:
-		return nil
+		return tokens.Scope{}
 	}
 }
