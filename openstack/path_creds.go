@@ -427,26 +427,28 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 }
 
 func getScopeFromRole(role *roleEntry) tokens.Scope {
+	var scope tokens.Scope
 	switch {
 	case role.ProjectID != "":
-		return tokens.Scope{
+		scope = tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
 	case role.ProjectName != "":
-		return tokens.Scope{
+		scope = tokens.Scope{
 			ProjectName: role.ProjectName,
 			DomainName:  role.DomainName,
 			DomainID:    role.DomainID,
 		}
 	case role.DomainID != "":
-		return tokens.Scope{
+		scope = tokens.Scope{
 			DomainID: role.DomainID,
 		}
 	case role.DomainName != "":
-		return tokens.Scope{
+		scope = tokens.Scope{
 			DomainName: role.DomainName,
 		}
 	default:
-		return tokens.Scope{}
+		scope = tokens.Scope{}
 	}
+	return scope
 }
