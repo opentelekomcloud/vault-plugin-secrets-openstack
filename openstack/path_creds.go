@@ -89,15 +89,15 @@ func (b *backend) pathCreds() *framework.Path {
 	}
 }
 
-func getRootCredentials(client *gophercloud.ServiceClient, container *credsOpts) (*logical.Response, error) {
-	if container.Role.SecretType == SecretPassword {
+func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
+	if opts.Role.SecretType == SecretPassword {
 		return nil, errRootNotToken
 	}
 	tokenOpts := &tokens.AuthOptions{
-		Username:   container.Config.Username,
-		Password:   container.Config.Password,
-		DomainName: container.Config.UserDomainName,
-		Scope:      *getScopeFromRole(container.Role),
+		Username:   opts.Config.Username,
+		Password:   opts.Config.Password,
+		DomainName: opts.Config.UserDomainName,
+		Scope:      getScopeFromRole(opts.Role),
 	}
 
 	token, err := createToken(client, tokenOpts)
@@ -106,7 +106,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, container *credsOpts)
 	}
 
 	data := map[string]interface{}{
-		"auth_url":   container.Config.AuthURL,
+		"auth_url":   opts.Config.AuthURL,
 		"token":      token.ID,
 		"expires_at": token.ExpiresAt.String(),
 	}
@@ -117,37 +117,37 @@ func getRootCredentials(client *gophercloud.ServiceClient, container *credsOpts)
 		},
 		InternalData: map[string]interface{}{
 			"secret_type": backendSecretTypeToken,
-			"cloud":       container.Config.Name,
+			"cloud":       opts.Config.Name,
 		},
 	}
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getTmpUserCredentials(client *gophercloud.ServiceClient, container *credsOpts) (*logical.Response, error) {
-	password, err := container.PwdGenerator.Generate(context.Background())
+func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
+	password, err := opts.PwdGenerator.Generate(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	username, err := RandomTemporaryUsername(container.UsernameTemplate, container.Role)
+	username, err := RandomTemporaryUsername(opts.UsernameTemplate, opts.Role)
 	if err != nil {
 		return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
 	}
 
-	user, err := createUser(client, username, password, container.Role)
+	user, err := createUser(client, username, password, opts.Role)
 	if err != nil {
 		return nil, err
 	}
 
 	var data map[string]interface{}
 	var secretInternal map[string]interface{}
-	switch r := container.Role.SecretType; r {
+	switch r := opts.Role.SecretType; r {
 	case SecretToken:
 		tokenOpts := &tokens.AuthOptions{
 			Username: user.Name,
 			Password: password,
 			DomainID: user.DomainID,
-			Scope:    *getScopeFromRole(container.Role),
+			Scope:    getScopeFromRole(opts.Role),
 		}
 
 		token, err := createToken(client, tokenOpts)
@@ -156,27 +156,27 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, container *credsOp
 		}
 
 		data = map[string]interface{}{
-			"auth_url":   container.Config.AuthURL,
+			"auth_url":   opts.Config.AuthURL,
 			"token":      token.ID,
 			"expires_at": token.ExpiresAt.String(),
 		}
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
-			"cloud":       container.Config.Name,
+			"cloud":       opts.Config.Name,
 		}
 	case SecretPassword:
 		data = map[string]interface{}{
-			"auth_url": container.Config.AuthURL,
+			"auth_url": opts.Config.AuthURL,
 			"username": user.Name,
 			"password": password,
 		}
 		switch {
-		case container.Role.ProjectID != "":
-			data["project_id"] = container.Role.ProjectID
+		case opts.Role.ProjectID != "":
+			data["project_id"] = opts.Role.ProjectID
 			data["project_domain_id"] = user.DomainID
-		case container.Role.ProjectName != "":
-			data["project_name"] = container.Role.ProjectName
+		case opts.Role.ProjectName != "":
+			data["project_name"] = opts.Role.ProjectName
 			data["project_domain_id"] = user.DomainID
 		default:
 			data["user_domain_id"] = user.DomainID
@@ -185,7 +185,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, container *credsOp
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
-			"cloud":       container.Config.Name,
+			"cloud":       opts.Config.Name,
 		}
 	default:
 		return nil, fmt.Errorf("invalid secret type: %s", r)
@@ -195,7 +195,7 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, container *credsOp
 		Data: data,
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       container.Role.TTL * time.Second,
+				TTL:       opts.Role.TTL * time.Second,
 				IssueTime: time.Now(),
 			},
 			InternalData: secretInternal,
@@ -221,7 +221,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return nil, err
 	}
 
-	container := &credsOpts{
+	opts := &credsOpts{
 		Role:             role,
 		Config:           cloudConfig,
 		PwdGenerator:     sharedCloud.passwords,
@@ -229,10 +229,10 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 	}
 
 	if role.Root {
-		return getRootCredentials(client, container)
+		return getRootCredentials(client, opts)
 	}
 
-	return getTmpUserCredentials(client, container)
+	return getTmpUserCredentials(client, opts)
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -426,27 +426,29 @@ func filterGroups(client *gophercloud.ServiceClient, domainID string, groupNames
 	return filteredGroups, nil
 }
 
-func getScopeFromRole(role *roleEntry) *tokens.Scope {
+func getScopeFromRole(role *roleEntry) tokens.Scope {
+	var scope tokens.Scope
 	switch {
 	case role.ProjectID != "":
-		return &tokens.Scope{
+		scope = tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
 	case role.ProjectName != "":
-		return &tokens.Scope{
+		scope = tokens.Scope{
 			ProjectName: role.ProjectName,
 			DomainName:  role.DomainName,
 			DomainID:    role.DomainID,
 		}
 	case role.DomainID != "":
-		return &tokens.Scope{
+		scope = tokens.Scope{
 			DomainID: role.DomainID,
 		}
 	case role.DomainName != "":
-		return &tokens.Scope{
+		scope = tokens.Scope{
 			DomainName: role.DomainName,
 		}
 	default:
-		return nil
+		scope = tokens.Scope{}
 	}
+	return scope
 }
