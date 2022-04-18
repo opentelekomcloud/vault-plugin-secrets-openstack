@@ -182,7 +182,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 		if err != nil {
 			return logical.ErrorResponse("invalid username template: %s", err), nil
 		}
-	} else if r.Operation == logical.CreateOperation || r.Operation == logical.UpdateOperation {
+	} else if r.Operation == logical.CreateOperation {
 		cloudConfig.UsernameTemplate = defaultUsernameTemplate
 	}
 	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
