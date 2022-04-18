@@ -5,7 +5,7 @@ This plugin generates revocable, time-limited Tokens and Users for OpenStack.
 
 ## Quick Links
 - [Vault Website](https://www.vaultproject.io)
-- [OpenStack Secrets Docs](https://...)
+- [OpenStack Secrets API Docs](./docs/api.md)
 - [Vault GitHub Project](https://www.github.com/hashicorp/vault)
 
 ## Getting Started
@@ -74,7 +74,7 @@ Success! Data written to: openstack/role/example-role
 $ vault read /os/creds/example-role
 ```
 
-## Developing
+### Developing
 
 If you wish to work on this plugin, you'll first need [Go](https://www.golang.org) installed on your machine (version 1.17+ is *required*).
 
