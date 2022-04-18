@@ -19,6 +19,8 @@ Configure the root credentials for an OpenStack cloud using the above parameters
 `
 	pathCloudListHelpSyn  = `List existing OpenStack clouds.`
 	pathCloudListHelpDesc = `List existing OpenStack clouds by name.`
+
+	defaultUsernameTemplate = "vault{{random 8 | lowercase}}"
 )
 
 func storageCloudKey(name string) string {
@@ -79,7 +81,7 @@ func (b *backend) pathCloud() *framework.Path {
 			},
 			"username_template": {
 				Type:        framework.TypeString,
-				Default:     "vault{{random 8 | lowercase}}",
+				Default:     defaultUsernameTemplate,
 				Description: "Name template for temporary generated users.",
 			},
 			"password": {
@@ -166,7 +168,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 			return logical.ErrorResponse("invalid username template: %s", err), nil
 		}
 	} else if r.Operation == logical.CreateOperation {
-		cloudConfig.UsernameTemplate = d.Schema["username_template"].Default.(string)
+		cloudConfig.UsernameTemplate = defaultUsernameTemplate
 	}
 	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
 		cloudConfig.PasswordPolicy = pwdPolicy.(string)
