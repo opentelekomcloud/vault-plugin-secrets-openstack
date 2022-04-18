@@ -42,6 +42,8 @@ $ export SHA256=$(shasum -a 256 "/etc/vault/plugins/vault-plugin-secrets-opensta
 $ vault write sys/plugins/catalog/plugin-secrets-openstack \
     sha_256="${SHA256}" \
     command="vault-plugin-secrets-openstack"
+    
+Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
 ```
 
 1. Mount the secrets' method:
@@ -50,6 +52,8 @@ $ vault write sys/plugins/catalog/plugin-secrets-openstack \
 $ vault secrets enable \
     -path="openstack" \
     -plugin-name="vault-plugin-secrets-openstack" plugin
+    
+Success! Enabled the vault-plugin-secrets-openstack secrets engine at: openstack/
 ```
 
 ## Usage Guideline.
