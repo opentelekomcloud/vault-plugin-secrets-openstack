@@ -10,6 +10,7 @@ import (
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,12 +39,11 @@ func (p *PluginTest) TestCloudLifecycle() {
 	t := p.T()
 
 	data := map[string]interface{}{
-		"auth_url":          "https://example.com/v3/",
-		"username":          tools.RandomString("us", 4),
-		"password":          tools.RandomString("", 15),
-		"user_domain_name":  "Default",
-		"username_template": "test{{ .RoleName }}{{ .CloudName }}",
-		"password_policy":   tools.RandomString("p", 5),
+		"auth_url":         "https://example.com/v3/",
+		"username":         tools.RandomString("us", 4),
+		"password":         tools.RandomString("", 15),
+		"user_domain_name": "Default",
+		"password_policy":  tools.RandomString("p", 5),
 	}
 	cloudName := "test-write"
 
@@ -71,7 +71,7 @@ func (p *PluginTest) TestCloudLifecycle() {
 			UserDomainName:   data["user_domain_name"].(string),
 			Username:         data["username"].(string),
 			Password:         data["password"].(string),
-			UsernameTemplate: data["username_template"].(string),
+			UsernameTemplate: openstack.DefaultUsernameTemplate,
 			PasswordPolicy:   data["password_policy"].(string),
 		}
 		assert.Equal(t, expected, extractCloudData(t, resp))
