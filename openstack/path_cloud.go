@@ -3,7 +3,6 @@ package openstack
 import (
 	"context"
 	"fmt"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -20,7 +19,7 @@ Configure the root credentials for an OpenStack cloud using the above parameters
 	pathCloudListHelpSyn  = `List existing OpenStack clouds.`
 	pathCloudListHelpDesc = `List existing OpenStack clouds by name.`
 
-	defaultUsernameTemplate = "vault{{random 8 | lowercase}}"
+	DefaultUsernameTemplate = "vault{{random 8 | lowercase}}"
 )
 
 func storageCloudKey(name string) string {
@@ -81,7 +80,7 @@ func (b *backend) pathCloud() *framework.Path {
 			},
 			"username_template": {
 				Type:        framework.TypeString,
-				Default:     defaultUsernameTemplate,
+				Default:     DefaultUsernameTemplate,
 				Description: "Name template for temporary generated users.",
 			},
 			"password": {
@@ -111,9 +110,19 @@ func (b *backend) pathCloud() *framework.Path {
 				Callback: b.pathCloudDelete,
 			},
 		},
+		ExistenceCheck:  b.cloudExistenceCheck,
 		HelpSynopsis:    pathCloudHelpSyn,
 		HelpDescription: pathCloudHelpDes,
 	}
+}
+
+func (b *backend) cloudExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
+	cloud := b.getSharedCloud(d.Get("name").(string))
+	cloudCfg, err := cloud.getCloudConfig(ctx, r.Storage)
+	if err != nil {
+		return false, err
+	}
+	return cloudCfg != nil, nil
 }
 
 func (b *backend) pathClouds() *framework.Path {
@@ -168,7 +177,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 			return logical.ErrorResponse("invalid username template: %s", err), nil
 		}
 	} else if r.Operation == logical.CreateOperation {
-		cloudConfig.UsernameTemplate = defaultUsernameTemplate
+		cloudConfig.UsernameTemplate = DefaultUsernameTemplate
 	}
 	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
 		cloudConfig.PasswordPolicy = pwdPolicy.(string)
