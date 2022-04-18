@@ -3,8 +3,6 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -144,8 +142,6 @@ func (b *backend) pathClouds() *framework.Path {
 }
 
 func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Input data: %+v", r)
-
 	name := d.Get("name").(string)
 
 	sCloud := b.getSharedCloud(name)
@@ -160,8 +156,6 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 			Name: name,
 		}
 	}
-
-	log.Printf("Input data (later): %+v", r)
 
 	if authURL, ok := d.GetOk("auth_url"); ok {
 		cloudConfig.AuthURL = authURL.(string)
