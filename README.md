@@ -4,8 +4,8 @@ This is a standalone backend plugin for use with [Hashicorp Vault](https://www.g
 This plugin generates revocable, time-limited Tokens and Users for OpenStack.
 
 ## Quick Links
-- [Vault Website](https://www.vaultproject.io)
 - [OpenStack Secrets API Docs](./docs/api.md)
+- [Vault Website](https://www.vaultproject.io)
 - [Vault GitHub Project](https://www.github.com/hashicorp/vault)
 
 ## Getting Started
@@ -76,6 +76,15 @@ Success! Data written to: openstack/role/example-role
 
 ```sh
 $ vault read /os/creds/example-role
+
+Key                Value
+---                -----
+lease_id           os/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
+lease_duration     1h
+lease_renewable    false
+auth_url           https://127.0.0.1/v3/
+expires_at         2022-04-19 02:03:36 +0000 UTC
+token              gAAAAABiXW-4r2Ofy4s4-oFlnbNgIrqONkmIHPnE...
 ```
 
 ### Developing
@@ -92,7 +101,8 @@ This will put the plugin binary in the `bin` and `$GOPATH/bin` folders.
 $ make
 ```
 
-Put the plugin binary into a location of your choice. This directory will be specified as the [`plugin_directory`](https://www.vaultproject.io/docs/configuration/index.html#plugin_directory) in the Vault config used to start the server.
+Put the plugin binary into a location of your choice. This directory will be specified as the [`plugin_directory`](https://www.vaultproject.io/docs/configuration/index.html#plugin_directory) 
+in the Vault config used to start the server.
 
 ```
 ...
@@ -103,17 +113,17 @@ plugin_directory = "path/to/plugin/directory"
 Start a Vault server with this config file:
 
 ```sh
-$ vault server -config=path/to/config.json ...
+$ vault server -dev -dev-root-token-id=root -config=path/to/config.json
 ```
 
-Once the server is started, register the plugin in the Vault server's [plugin catalog](https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog):
+Once the server is started, register the plugin in the Vault server's [`plugin catalog`](https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog):
 
 ```sh
-$ vault write sys/plugins/catalog/openstack \
+$ vault write sys/plugins/catalog/plugin-secrets-openstack \
         sha256=<expected SHA256 Hex value of the plugin binary> \
         command="vault-plugin-secrets-openstack"
-...
-Success! Data written to: sys/plugins/catalog/openstack
+
+Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
 ```
 
 Note you should generate a new sha256 checksum if you have made changes
@@ -128,9 +138,9 @@ SHA256(.../go/bin/vault-plugin-secrets-openstack)=896c13c0f2305daed381912a128322
 Enable the secrets' plugin backend using the secrets enable plugin command:
 
 ```sh
-$ vault secrets enable -plugin-name=openstack plugin
+$ vault secrets enable -path=openstack -plugin-name=plugin-secrets-openstack plugin
 ...
-Successfully enabled the ... secrets engine at: openstack/!
+Successfully enabled the plugin-secrets-openstack secrets engine at: openstack/!
 ```
 
 #### Tests
@@ -147,7 +157,7 @@ $ make test
 
 #### Acceptance Tests
 
-Acceptance tests requires OpenStack access.
+Acceptance tests requires admin privileges in an OpenStack cloud.
 
 ```sh
 $ export OS_CLOUD=example
