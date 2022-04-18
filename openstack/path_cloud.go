@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -111,9 +112,19 @@ func (b *backend) pathCloud() *framework.Path {
 				Callback: b.pathCloudDelete,
 			},
 		},
+		ExistenceCheck:  b.cloudExistenceCheck,
 		HelpSynopsis:    pathCloudHelpSyn,
 		HelpDescription: pathCloudHelpDes,
 	}
+}
+
+func (b *backend) cloudExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
+	cloud := b.getSharedCloud(d.Get("name").(string))
+	cloudCfg, err := cloud.getCloudConfig(ctx, r.Storage)
+	if err != nil {
+		return false, err
+	}
+	return cloudCfg != nil, nil
 }
 
 func (b *backend) pathClouds() *framework.Path {
@@ -133,6 +144,8 @@ func (b *backend) pathClouds() *framework.Path {
 }
 
 func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Input data: %+v", r)
+
 	name := d.Get("name").(string)
 
 	sCloud := b.getSharedCloud(name)
@@ -147,6 +160,8 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 			Name: name,
 		}
 	}
+
+	log.Printf("Input data (later): %+v", r)
 
 	if authURL, ok := d.GetOk("auth_url"); ok {
 		cloudConfig.AuthURL = authURL.(string)
