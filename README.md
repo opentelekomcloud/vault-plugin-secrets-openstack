@@ -97,12 +97,12 @@ If you wish to work on this plugin, you'll first need [Go](https://www.golang.or
 For local dev first make sure Go is properly installed, including  setting up a [GOPATH](https://golang.org/doc/code.html#GOPATH).
 Next, clone this repository into `$GOPATH/src/github.com/opentelekomcloud/vault-plugin-secrets-openstack`.
 
-To compile a development version of this plugin, run `make` and `go install` commands.
+To compile a development version of this plugin, run `make` and `make install` commands.
 This will put the plugin binary in the `bin` and `$GOPATH/bin` folders.
 
 ```sh
 $ make
-$ go install vault-plugin-secrets-openstack
+$ make install
 ```
 
 Put the plugin binary into a location of your choice. This directory should be specified as the [`plugin_directory`](https://www.vaultproject.io/docs/configuration/index.html#plugin_directory) 
