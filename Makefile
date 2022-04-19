@@ -26,6 +26,9 @@ build:
 	@mkdir -p $(VAULT_PLUGIN_DIR)
 	@go build -o $(BINARY_PATH) -ldflags "$(ldflags)"
 
+install:
+	@go install -trimpath -ldflags  "$(ldflags)"
+
 release:
 	goreleaser release
 
