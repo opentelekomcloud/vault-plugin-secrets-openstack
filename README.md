@@ -39,7 +39,7 @@ $ mv vault-plugin-secrets-openstack /etc/vault/plugins/vault-plugin-secrets-open
 ```sh
 $ export SHA256=$(shasum -a 256 "/etc/vault/plugins/vault-plugin-secrets-openstack" | cut -d' ' -f1)
 
-$ vault write sys/plugins/catalog/plugin-secrets-openstack \
+$ vault write sys/plugins/catalog/vault-plugin-secrets-openstack \
     sha_256="${SHA256}" \
     command="vault-plugin-secrets-openstack"
     
@@ -119,11 +119,11 @@ $ vault server -dev -dev-root-token-id=root -config=path/to/config.json
 Once the server is started, register the plugin in the Vault server's [`plugin catalog`](https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog):
 
 ```sh
-$ vault write sys/plugins/catalog/plugin-secrets-openstack \
+$ vault write sys/plugins/catalog/vault-plugin-secrets-openstack \
         sha256=<expected SHA256 Hex value of the plugin binary> \
         command="vault-plugin-secrets-openstack"
 
-Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
+Success! Data written to: sys/plugins/catalog/vault-plugin-secrets-openstack
 ```
 
 Note you should generate a new sha256 checksum if you have made changes
@@ -138,7 +138,7 @@ SHA256(.../go/bin/vault-plugin-secrets-openstack)=896c13c0f2305daed381912a128322
 Enable the secrets' plugin backend using the secrets enable plugin command:
 
 ```sh
-$ vault secrets enable -path=openstack -plugin-name=plugin-secrets-openstack plugin
+$ vault secrets enable -path=openstack -plugin-name=vault-plugin-secrets-openstack plugin
 ...
 Successfully enabled the plugin-secrets-openstack secrets engine at: openstack/!
 ```
@@ -160,7 +160,7 @@ $ make test
 Acceptance tests requires admin privileges in an OpenStack cloud.
 
 ```sh
-$ export OS_CLOUD=example
 $ export OS_CLIENT_CONFIG_FILE=<clouds.yaml path>
+$ export OS_CLOUD=<cloud name>
 $ make functional
 ```
