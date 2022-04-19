@@ -65,6 +65,9 @@ $ vault write /openstack/cloud/example-cloud auth_url=https://127.0.0.1/v3/ user
 Success! Data written to: openstack/cloud/example-cloud
 ```
 
+> **_NOTE:_** In the `cloud` you can specify additional parameters such as [`username_template`](https://www.vaultproject.io/docs/concepts/username-templating) 
+> and [`password_policy`](https://www.vaultproject.io/docs/concepts/password-policies) in order to follow conventions and security policies defined in your OpenStack cloud.
+
 1. After that you need to create a role for the cloud.
 
 ```sh
