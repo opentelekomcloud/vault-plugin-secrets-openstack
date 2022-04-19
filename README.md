@@ -28,67 +28,67 @@ You must have a Vault server already running, unsealed, and authenticated.
 
 1. Move the compiled plugin into Vault's configured [`plugin_directory`](https://www.vaultproject.io/docs/configuration/index.html#plugin_directory):
 
-```sh
-$ mv vault-plugin-secrets-openstack /etc/vault/plugins/vault-plugin-secrets-openstack
-```
+   ```sh
+   $ mv vault-plugin-secrets-openstack /etc/vault/plugins/vault-plugin-secrets-openstack
+   ```
 
 1. Calculate the SHA256 of the plugin and register it in Vault's plugin catalog.
    If you are downloading the pre-compiled binary, it is highly recommended that
    you use the published checksums to verify integrity.
 
-```sh
-$ export SHA256=$(shasum -a 256 "/etc/vault/plugins/vault-plugin-secrets-openstack" | cut -d' ' -f1)
+   ```sh
+   $ export SHA256=$(shasum -a 256 "/etc/vault/plugins/vault-plugin-secrets-openstack" | cut -d' ' -f1)
+   
+   $ vault write sys/plugins/catalog/vault-plugin-secrets-openstack \
+       sha_256="${SHA256}" \
+       command="vault-plugin-secrets-openstack"
+       
+   Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
+   ```
 
-$ vault write sys/plugins/catalog/vault-plugin-secrets-openstack \
-    sha_256="${SHA256}" \
-    command="vault-plugin-secrets-openstack"
-    
-Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
-```
+1. Mount secrets engine:
 
-1. Mount the secrets' method:
-
-```sh
-$ vault secrets enable \
-    -path="openstack" \
-    -plugin-name="vault-plugin-secrets-openstack" plugin
-    
-Success! Enabled the vault-plugin-secrets-openstack secrets engine at: openstack/
-```
+   ```sh
+   $ vault secrets enable \
+       -path="openstack" \
+       -plugin-name="vault-plugin-secrets-openstack" plugin
+       
+   Success! Enabled the vault-plugin-secrets-openstack secrets engine at: openstack/
+   ```
 
 ## Usage Guideline.
 
 1. Firstly you have to define an admin credentials in a cloud.
 
-```sh
-$ vault write /openstack/cloud/example-cloud auth_url=https://127.0.0.1/v3/ username=admin password=admin user_domain_name=mydomain
-Success! Data written to: openstack/cloud/example-cloud
-```
+   ```sh
+   $ vault write /openstack/cloud/example-cloud auth_url=https://127.0.0.1/v3/ username=admin password=admin user_domain_name=mydomain
+   Success! Data written to: openstack/cloud/example-cloud
+   ```
 
-> **_NOTE:_** In the `cloud` you can specify additional parameters such as [`username_template`](https://www.vaultproject.io/docs/concepts/username-templating) 
-> and [`password_policy`](https://www.vaultproject.io/docs/concepts/password-policies) in order to follow conventions and security policies defined in your OpenStack cloud.
+   > **_NOTE:_** In the `cloud` you can specify additional parameters such as [`username_template`](https://www.vaultproject.io/docs/concepts/username-templating) 
+   > and [`password_policy`](https://www.vaultproject.io/docs/concepts/password-policies) in order to follow conventions and security policies defined in your OpenStack cloud.
 
 1. After that you need to create a role for the cloud.
 
-```sh
-$ vault write /openstack/role/example-role cloud=example-cloud project_name=myproject domain_name=mydomain user_roles="member" root=false
-Success! Data written to: openstack/role/example-role
-```
+   ```sh
+   $ vault write /openstack/role/example-role cloud=example-cloud project_name=myproject domain_name=mydomain user_roles="member" root=false
+   Success! Data written to: openstack/role/example-role
+   ```
 
 1. Now you can easily create a temporary user/token pair.
 
-```sh
-$ vault read /os/creds/example-role
-
-Key                Value
----                -----
-lease_id           os/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
-lease_duration     1h
-lease_renewable    false
-auth_url           https://127.0.0.1/v3/
-expires_at         2022-04-19 02:03:36 +0000 UTC
-token              gAAAAABiXW-4r2Ofy4s4-oFlnbNgIrqONkmIHPnE...
-```
+   ```sh
+   $ vault read /os/creds/example-role
+   
+   Key                Value
+   ---                -----
+   lease_id           os/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
+   lease_duration     1h
+   lease_renewable    false
+   auth_url           https://127.0.0.1/v3/
+   expires_at         2022-04-19 02:03:36 +0000 UTC
+   token              gAAAAABiXW-4r2Ofy4s4-oFlnbNgIrqONkmIHPnE...
+   ```
 
 ### Developing
 
