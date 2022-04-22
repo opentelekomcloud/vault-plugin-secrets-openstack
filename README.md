@@ -43,7 +43,7 @@ You must have a Vault server already running, unsealed, and authenticated.
        sha_256="${SHA256}" \
        command="vault-plugin-secrets-openstack"
        
-   Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
+   Success! Data written to: sys/plugins/catalog/vault-plugin-secrets-openstack
    ```
 
 1. Mount secrets engine:
@@ -78,11 +78,11 @@ You must have a Vault server already running, unsealed, and authenticated.
 1. Now you can easily create a temporary user/token pair.
 
    ```sh
-   $ vault read /os/creds/example-role
+   $ vault read /openstack/creds/example-role
    
    Key                Value
    ---                -----
-   lease_id           os/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
+   lease_id           openstack/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
    lease_duration     1h
    lease_renewable    false
    auth_url           https://127.0.0.1/v3/
