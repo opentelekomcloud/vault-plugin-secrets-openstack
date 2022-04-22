@@ -56,7 +56,7 @@ $ curl \
     http://127.0.0.1:8200/v1/openstack/cloud/example-cloud
 ```
 
-## Read Root Cloud
+## Read Root Configuration
 
 This endpoint allows you to read non-secure values that have been set in the `cloud/:cloud` endpoint.
 In particular, the `password` parameter is never returned.
