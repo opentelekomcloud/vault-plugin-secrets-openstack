@@ -43,7 +43,7 @@ You must have a Vault server already running, unsealed, and authenticated.
        sha_256="${SHA256}" \
        command="vault-plugin-secrets-openstack"
        
-   Success! Data written to: sys/plugins/catalog/plugin-secrets-openstack
+   Success! Data written to: sys/plugins/catalog/vault-plugin-secrets-openstack
    ```
 
 1. Mount secrets engine:
