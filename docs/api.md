@@ -11,9 +11,9 @@ possible to enable secrets engines at any location, please update your API calls
 This endpoint configures the root credentials to communicate with OpenStack instance. If credentials already exist, this
 will overwrite them.
 
-| Method   | Path                       |
-|:---------|:---------------------------|
-| `POST`   | `/openstack/config/:cloud` |
+| Method   | Path                      |
+|:---------|:--------------------------|
+| `POST`   | `/openstack/cloud/:cloud` |
 
 ### Parameters
 
@@ -25,11 +25,12 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `username_template` `(string)` - Template used for usernames of temporary users. For details on templating syntax
-  please refer to [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating).
-  Additional fields available for the template are `.CloudName`, `.RoleName`.
+* `username_template` `(string: "vault{{random 8 | lowercase}}")` - Template used for usernames 
+  of temporary users. For details on templating syntax please refer to 
+  [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating). Additional 
+  fields available for the template are `.CloudName`, `.RoleName`.
 
-* `password_policy` `(string)` - Specifies a password policy name to use when creating dynamic credentials. 
+* `password_policy` `(string: <optional>)` - Specifies a password policy name to use when creating dynamic credentials. 
   Defaults to generating an alphanumeric password if not set. For details on password policies please refer
   to [Password Policies](https://www.vaultproject.io/docs/concepts/password-policies).
 
@@ -52,24 +53,24 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/config/example-cloud
+    http://127.0.0.1:8200/v1/openstack/cloud/example-cloud
 ```
 
 ## Read Root Configuration
 
-This endpoint allows you to read non-secure values that have been configured in the `config/:cloud` endpoint.
+This endpoint allows you to read non-secure values that have been set in the `cloud/:cloud` endpoint.
 In particular, the `password` parameter is never returned.
 
-| Method | Path                       |
-|:-------|:---------------------------|
-| `GET`  | `/openstack/config/:cloud` |
+| Method | Path                      |
+|:-------|:--------------------------|
+| `GET`  | `/openstack/cloud/:cloud` |
 
 ### Sample Request
 
 ```shell
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/config/example-cloud
+    http://127.0.0.1:8200/v1/openstack/cloud/example-cloud
 ```
 
 ### Sample Response
@@ -82,9 +83,9 @@ $ curl \
 }
 ```
 
-## List Root Configurations
+## List Clouds
 
-This endpoint allows you to list configurations values that have been configured in the `configs` endpoint.
+This endpoint allows you to list clouds values that have been configured in the `clouds` endpoint.
 
 | Method | Path                 |
 |:-------|:---------------------|
@@ -105,7 +106,7 @@ $ curl \
 ```json
 {
   "data": {
-    "keys": ["sample-config-1", "sample-config-2"]  
+    "keys": ["sample-cloud-1", "sample-cloud-2"]  
   }
 }
 ```
