@@ -9,16 +9,13 @@
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
-        - goreleaser-build:
-            nodeset: fedora-32-large
+        - goreleaser-build
     gate:
       jobs:
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
-        - goreleaser-build:
-            nodeset: fedora-32-large
+        - goreleaser-build
     tag:
       jobs:
-        - release-goreleaser:
-            nodeset: fedora-32-large
+        - release-goreleaser
