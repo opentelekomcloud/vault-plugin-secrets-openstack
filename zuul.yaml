@@ -6,12 +6,14 @@
     default-branch: main
     check:
       jobs:
+        - build-otc-doc
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
         - goreleaser-build
     gate:
       jobs:
+        - build-otc-doc
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
