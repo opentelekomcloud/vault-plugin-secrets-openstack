@@ -26,13 +26,12 @@ scripts.
 .. literalinclude:: terraform_vault_configure/vault_configure.tf
    :language: guess
 
-``variables.tf`` file with the ``vault`` address.
+``variables.tf`` file with input variables.
 
 .. literalinclude:: terraform_vault_configure/variables.tf
    :language: guess
 
-After that it is possible to run the ``terraform`` and proceed with the
-configuration.
+Now you can run the ``terraform`` and proceed with the configuration.
 
 .. code-block:: console
 
