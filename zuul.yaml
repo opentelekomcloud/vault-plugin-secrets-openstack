@@ -18,6 +18,10 @@
         - golang-make-vet
         - golang-make-test
         - goreleaser-build
+    promote:
+      jobs:
+        - promote-otc-tox-docs:
+            download_artifact_job: "build-otc-doc"
     tag:
       jobs:
         - release-goreleaser
