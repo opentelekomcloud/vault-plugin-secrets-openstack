@@ -61,5 +61,4 @@ does no longer affect operations.
    configuration
    usage
    api.md
-   configure_vault_tf
-   use_openstack_vault_tf
+   examples/index

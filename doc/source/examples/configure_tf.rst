@@ -1,35 +1,51 @@
 Configure OpenStack Secrets Engine With Terraform
 =================================================
 
-Prerequisite
-------------
+This example demonstrates how to configure the plugin with the help of
+HashiCorp Terraform. It does not describe how to get OpenStack credentials from
+Vault with Terraform.
 
-Before proceeding with the Vault configuration, you must have:
-
-1. A virtual machine with an external address.
-
-2. Vault server with enabled OpenStack secrets engine is up and running.
-
-Configuration
+Prerequisites
 -------------
 
-After that it is possible to configure OpenStack plugin with the given
-scripts.
+This demo requires that there is a Vault server up and running with OpenStack
+Secrets plugin deployed and enabled. Please see :ref:`installation` for details
+on this can be achieved.
+
+Preparation
+-----------
 
 ``settings.tf`` file with the ``vault`` provider.
 
 .. literalinclude:: terraform_vault_configure/settings.tf
-   :language: guess
+   :caption: settings.tf
 
 ``vault_configure.tf`` file with a minimal required configuration.
 
 .. literalinclude:: terraform_vault_configure/vault_configure.tf
-   :language: guess
+   :caption: vault_configure.tf
 
-``variables.tf`` file with input variables.
+``variables.tf`` file with input variables
 
 .. literalinclude:: terraform_vault_configure/variables.tf
-   :language: guess
+   :caption: variables.tf
+
+Json configuration description (see :ref:`api` for further details about supported parameters)
+
+.. literalinclude:: terraform_vault_configure/vault_data/os_policy.json
+   :caption: os_policy.json
+
+.. literalinclude:: terraform_vault_configure/vault_data/os_root.json
+   :caption: os_root.json
+
+.. literalinclude:: terraform_vault_configure/vault_data/root_token.json
+   :caption: root_token.json
+
+.. literalinclude:: terraform_vault_configure/vault_data/tmp_user_token.json
+   :caption: tmp_user_token.json
+
+Invocation
+----------
 
 Now you can run the ``terraform`` and proceed with the configuration.
 
@@ -54,4 +70,3 @@ Now you can run the ``terraform`` and proceed with the configuration.
    vault_generic_secret.tmp_user_token: Creation complete after 1s [id=openstack/role/tmp_user_token]
 
    Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
-
