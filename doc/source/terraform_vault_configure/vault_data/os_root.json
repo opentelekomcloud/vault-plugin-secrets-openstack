@@ -1,0 +1,7 @@
+{
+    "auth_url": "https://127.0.0.1/v3",
+    "username": "",
+    "password": "",
+    "user_domain_name": "",
+    "password_policy": "os_policy"
+}
