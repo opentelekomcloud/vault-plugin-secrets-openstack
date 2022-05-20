@@ -6,16 +6,23 @@
     default-branch: main
     check:
       jobs:
+        - build-sphinx-docs
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
         - goreleaser-build
     gate:
       jobs:
+        - build-sphinx-docs
         - otc-golangci-lint
         - golang-make-vet
         - golang-make-test
         - goreleaser-build
+    promote:
+      jobs:
+        - promote-otc-tox-docs:
+            vars:
+              download_artifact_job: "build-sphinx-docs"
     tag:
       jobs:
         - release-goreleaser

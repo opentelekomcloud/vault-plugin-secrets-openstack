@@ -19,3 +19,6 @@ vendor/
 /dist
 /vault
 /bin
+
+# Sphinx
+doc/build

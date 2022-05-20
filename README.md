@@ -4,7 +4,8 @@ This is a standalone backend plugin for use with [Hashicorp Vault](https://www.g
 This plugin generates revocable, time-limited Tokens and Users for OpenStack.
 
 ## Quick Links
-- [OpenStack Secrets API Docs](./docs/api.md)
+- [OpenStack Secrets API
+  Docs](https://docs-beta.otc.t-systems.com/vault-plugin-secrets-openstack/api.html)
 - [Vault Website](https://www.vaultproject.io)
 - [Vault GitHub Project](https://www.github.com/hashicorp/vault)
 
