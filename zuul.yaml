@@ -20,9 +20,7 @@
         - goreleaser-build
     promote:
       jobs:
-        - promote-otc-tox-docs:
-            vars:
-              download_artifact_job: "build-sphinx-docs"
+        - promote-otc-sphinx-docs-hc
     tag:
       jobs:
         - release-goreleaser
