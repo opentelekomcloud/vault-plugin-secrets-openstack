@@ -34,7 +34,10 @@ func (b *backend) pathRotateRoot() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.rotateRootCredentials,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.rotateRootCredentials,
 			},
 		},
