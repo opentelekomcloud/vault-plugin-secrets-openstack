@@ -105,14 +105,16 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 		return nil, err
 	}
 
+	authResponse := &authResponseData{
+		AuthURL:    opts.Config.AuthURL,
+		Token:      token.ID,
+		DomainName: opts.Config.UserDomainName,
+	}
+
 	data := map[string]interface{}{
 		"auth": formAuthResponse(
 			opts.Role,
-			"",
-			"",
-			token.ID,
-			opts.Config.AuthURL,
-			opts.Config.UserDomainName,
+			authResponse,
 		),
 		"auth_type": "token",
 	}
@@ -162,14 +164,16 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 			return nil, err
 		}
 
+		authResponse := &authResponseData{
+			AuthURL:  opts.Config.AuthURL,
+			Token:    token.ID,
+			DomainID: user.DomainID,
+		}
+
 		data = map[string]interface{}{
 			"auth": formAuthResponse(
 				opts.Role,
-				"",
-				"",
-				token.ID,
-				opts.Config.AuthURL,
-				user.DomainID,
+				authResponse,
 			),
 			"auth_type": "token",
 		}
@@ -180,14 +184,16 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 			"expires_at":  token.ExpiresAt.String(),
 		}
 	case SecretPassword:
+		authResponse := &authResponseData{
+			AuthURL:  opts.Config.AuthURL,
+			Username: user.Name,
+			Password: password,
+			DomainID: user.DomainID,
+		}
 		data = map[string]interface{}{
 			"auth": formAuthResponse(
 				opts.Role,
-				user.Name,
-				password,
-				"",
-				opts.Config.AuthURL,
-				user.DomainID,
+				authResponse,
 			),
 			"auth_type": "password",
 		}
@@ -468,7 +474,16 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 	return scope
 }
 
-func formAuthResponse(role *roleEntry, username, password, token, authURL, domainID string) map[string]interface{} {
+type authResponseData struct {
+	AuthURL    string
+	Username   string
+	Password   string
+	Token      string
+	DomainID   string
+	DomainName string
+}
+
+func formAuthResponse(role *roleEntry, authResponse *authResponseData) map[string]interface{} {
 	var auth map[string]interface{}
 
 	switch {
@@ -477,24 +492,31 @@ func formAuthResponse(role *roleEntry, username, password, token, authURL, domai
 			"project_id": role.ProjectID,
 		}
 	case role.ProjectName != "":
-		auth = map[string]interface{}{
-			"project_name":      role.ProjectName,
-			"project_domain_id": domainID,
+		if role.Root {
+			auth = map[string]interface{}{
+				"project_name":        role.ProjectName,
+				"project_domain_name": authResponse.DomainName,
+			}
+		} else {
+			auth = map[string]interface{}{
+				"project_name":      role.ProjectName,
+				"project_domain_id": authResponse.DomainID,
+			}
 		}
 	default:
 		auth = map[string]interface{}{
-			"user_domain_id": domainID,
+			"user_domain_id": authResponse.DomainID,
 		}
 	}
 
-	if token != "" {
-		auth["token"] = token
+	if authResponse.Token != "" {
+		auth["token"] = authResponse.Token
 	} else {
-		auth["username"] = username
-		auth["password"] = password
+		auth["username"] = authResponse.Username
+		auth["password"] = authResponse.Password
 	}
 
-	auth["auth_url"] = authURL
+	auth["auth_url"] = authResponse.AuthURL
 
 	return auth
 }
