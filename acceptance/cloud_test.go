@@ -70,7 +70,6 @@ func (p *PluginTest) TestCloudLifecycle() {
 			AuthURL:          data["auth_url"].(string),
 			UserDomainName:   data["user_domain_name"].(string),
 			Username:         data["username"].(string),
-			Password:         data["password"].(string),
 			UsernameTemplate: openstack.DefaultUsernameTemplate,
 			PasswordPolicy:   data["password_policy"].(string),
 		}
