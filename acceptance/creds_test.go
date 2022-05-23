@@ -5,6 +5,7 @@ package acceptance
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
 
@@ -29,6 +30,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 		Root       bool
 		SecretType string
 		UserRoles  []string
+		Extensions map[string]interface{}
 	}
 
 	cases := map[string]testCase{
@@ -45,6 +47,9 @@ func (p *PluginTest) TestCredsLifecycle() {
 			Root:       false,
 			SecretType: "token",
 			UserRoles:  []string{"member"},
+			Extensions: map[string]interface{}{
+				"identity_api_version": "3",
+			},
 		},
 		"user_password": {
 			Cloud:      cloud.Name,
@@ -52,6 +57,9 @@ func (p *PluginTest) TestCredsLifecycle() {
 			DomainID:   aux.DomainID,
 			Root:       false,
 			SecretType: "password",
+			Extensions: map[string]interface{}{
+				"object_store_endpoint_override": "https://swift.example.com",
+			},
 		},
 	}
 
@@ -81,7 +89,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			resp, err = p.vaultDo(
 				http.MethodPost,
 				roleURL(roleName),
-				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles),
+				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles, data.Extensions),
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
@@ -100,7 +108,10 @@ func (p *PluginTest) TestCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+			raw := readJSONResponse(t, resp)
+			assert.Equal(t, http.StatusOK, resp.StatusCode, raw)
+
+			log.Printf("CREDENTIALS RESPONSE: %+v", raw)
 
 			resp, err = p.vaultDo(
 				http.MethodDelete,
@@ -137,7 +148,7 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	}
 }
 
-func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string, userRoles []string) map[string]interface{} {
+func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string, userRoles []string, extensions map[string]interface{}) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
 		"cloud":       cloud,
 		"project_id":  projectID,
@@ -145,5 +156,6 @@ func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string, us
 		"root":        root,
 		"secret_type": secretType,
 		"user_roles":  userRoles,
+		"extensions":  extensions,
 	})
 }
