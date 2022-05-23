@@ -75,7 +75,8 @@ $ curl \
 {
   "auth_url": "https://example.com/v3/",
   "username": "admin",
-  "user_domain_name": "Default"
+  "user_domain_name": "Default",
+  "username_template": "user-{{ .RoleName }}-{{ random 4 }}"
 }
 ```
 

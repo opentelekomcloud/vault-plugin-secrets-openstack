@@ -80,15 +80,20 @@ You must have a Vault server already running, unsealed, and authenticated.
 
    ```sh
    $ vault read /openstack/creds/example-role
-   
+
    Key                Value
    ---                -----
-   lease_id           openstack/creds/example-role/Kuma41Qu8s1k5f4AZ8PUmDxE
-   lease_duration     1h
+   lease_id           openstack/creds/example-role/v7I5mxix3iCpkdGYDelNmKdo
+   lease_duration     24h
    lease_renewable    false
-   auth_url           https://127.0.0.1/v3/
-   expires_at         2022-04-19 02:03:36 +0000 UTC
-   token              gAAAAABiXW-4r2Ofy4s4-oFlnbNgIrqONkmIHPnE...
+   auth               map[auth_url:https://127.0.0.1/v3/ project_domain_name:mydomain project_name:myproject token:MIIF-QYJKoZIhvcNAQcCoIIF7jCCBeoCAQExDTALBglghkgBZQMEAgEwggOCBgkqhkiG9w0BBwGgggNzBIIDb3sidG
+   9rZW4iOnsiZXhwaXJlc19hdCI6IjIwMjItMDUtMjRUMTc6MTU6NDQuNTI4MDAwWiIsIm1ldGhvZHMiOlsicGFzc3dvcmQiXSwiY2F0YWxvZyI6W10sInJvbGVzIjpbeyJuYW1lIjoic2VydmVyX2FkbSIsImlkIjoiMCJ9LHsibmFtZSI6InRlX2FkbWluIiwiaWQiOiIwIn0seyJuYW1lIjoib3BfZ2F0ZWRfY2
+   NlX3N3aXRjaCIsImlkIjoiMCJ9LHsibmFtZSIwiaWQiOiIwIn1dLCJwcm9qZWN0Ijp7ImRvbWFpbiI6eyJ4ZG9tYWluX3R5cGUiOiJUU0kiLCJuYW1lIjoiT1RDMDAwMDAwMDAwMDEwMDAwMDA0NDciLCJpZCI6ImZhZjcyZTg1MWMxZTQ4MzE5Mjk2ZjE4MTgxOGYxNzZhIiwieGRvbWFpbl9pZCI6IjAwMD
+   AwMDAwMDAxMDAwMDAwNDQ3In0sIm5hbWUiOiJlCwYDVQQHDARCb25uMRwwGgYDVQQKDBNEZXV0c2NoZSBUZWxla29tIEFHMTcwNQYDVQQLDC5ULVN5c3RlbXMgUFUgUHVibGljIENsb3VkIC0gT3BlbiBUZWxla29tIENsb3VkMRMwEQYDVQQDDApjYS5pYW0ucGtpAg
+   kAi0NlULiz2iIwCwYJYIZIAWUDBAIBMA0GCSqGSIb3DQEBAQUABIIBgBtmvHm0ChAl0kppzoaVJgYSovI0ujP6Srk7sDrDVO7auks+dQ-D1yb4Xh398mn1VNs0i4e98Bp-AQnwb3N-uZcUnbNHAUg2uRUoWUBmVs8oXszkGJYRK6Kf+BgGE5GqS4KgE2e8ob96xPGRQ5WdKMjYzb9nAz37sUsvy-jz70anyhKoWW
+   B55kYVDyCn4JYh7-ivKrfaHdNY9GSebskw0zqAeMr2Lr4DZyZcr6mor88p1MnT+kz028qcxkrHBKiHQ0wt8YWUfAFD7RV-b97ZkBBSeEMs3ai1zMbYWXtIzztAWZLn52l+vstKiae8hXoE4HIpkMOD+fTyj2z6gN7X6xfvfBIZC2mSOQ2PAiTls2JTrcDVEo3eCI1vgvKrFdY52yDGmb3lHBITPPya0ztvjFrdNv59Gdx8-rxf1fr1htXRhyaMOBiaPDGVkUtjwqC9Zjm3fve5Z5A6UQurBm8xDjtRWjnFB5kAQ708adpCUHJAdxand3Mf-Md4UysLVSf4Ug==]
+   auth_type          token
+
    ```
 
 ### Developing

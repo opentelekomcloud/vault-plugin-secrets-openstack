@@ -143,7 +143,6 @@ func TestCloudCreate(t *testing.T) {
 		assert.Equal(t, res.Data["auth_url"], testAuthURL)
 		assert.Equal(t, res.Data["user_domain_name"], testUserDomainName)
 		assert.Equal(t, res.Data["username"], testUsername)
-		assert.Equal(t, res.Data["password"], testPassword1)
 	})
 
 	t.Run("Delete", func(t *testing.T) {
