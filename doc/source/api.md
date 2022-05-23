@@ -116,7 +116,7 @@ Once this method is called, Vault will now be the only entity that knows the pas
 
 | Method | Path                            |
 |:-------|:--------------------------------|
-| `GET`  | `/openstack/rotate-root/:cloud` |
+| `POST` | `/openstack/rotate-root/:cloud` |
 
 ### Sample Request
 
