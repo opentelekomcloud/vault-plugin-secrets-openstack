@@ -466,9 +466,7 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 }
 
 func formAuthResponse(role *roleEntry, username, password, token, authURL, domainID string) map[string]interface{} {
-	auth := map[string]interface{}{
-		"auth_url": authURL,
-	}
+	var auth map[string]interface{}
 
 	switch {
 	case role.ProjectID != "":
@@ -493,6 +491,8 @@ func formAuthResponse(role *roleEntry, username, password, token, authURL, domai
 		auth["username"] = username
 		auth["password"] = password
 	}
+
+	auth["auth_url"] = authURL
 
 	return auth
 }
