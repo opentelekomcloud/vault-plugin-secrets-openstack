@@ -210,7 +210,6 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 			"auth_url":          cloudConfig.AuthURL,
 			"user_domain_name":  cloudConfig.UserDomainName,
 			"username":          cloudConfig.Username,
-			"password":          cloudConfig.Password,
 			"username_template": cloudConfig.UsernameTemplate,
 			"password_policy":   cloudConfig.PasswordPolicy,
 		},
