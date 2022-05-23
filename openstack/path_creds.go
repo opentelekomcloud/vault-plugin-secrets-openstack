@@ -156,30 +156,26 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		}
 
 		data = map[string]interface{}{
-			"auth_url":   opts.Config.AuthURL,
-			"token":      token.ID,
-			"expires_at": token.ExpiresAt.String(),
+			"auth": map[string]interface{}{
+				"auth_url": opts.Config.AuthURL,
+				"token":    token.ID,
+			},
+			"auth_type": "token",
 		}
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
+			"expires_at":  token.ExpiresAt.String(),
 		}
 	case SecretPassword:
 		data = map[string]interface{}{
-			"auth_url": opts.Config.AuthURL,
-			"username": user.Name,
-			"password": password,
-		}
-		switch {
-		case opts.Role.ProjectID != "":
-			data["project_id"] = opts.Role.ProjectID
-			data["project_domain_id"] = user.DomainID
-		case opts.Role.ProjectName != "":
-			data["project_name"] = opts.Role.ProjectName
-			data["project_domain_id"] = user.DomainID
-		default:
-			data["user_domain_id"] = user.DomainID
+			"auth": map[string]interface{}{
+				"auth_url": opts.Config.AuthURL,
+				"username": user.Name,
+				"password": password,
+			},
+			"auth_type": "password",
 		}
 
 		secretInternal = map[string]interface{}{
@@ -189,6 +185,27 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		}
 	default:
 		return nil, fmt.Errorf("invalid secret type: %s", r)
+	}
+
+	switch {
+	case opts.Role.ProjectID != "":
+		data["auth"] = map[string]interface{}{
+			"project_id":        opts.Role.ProjectID,
+			"project_domain_id": user.DomainID,
+		}
+	case opts.Role.ProjectName != "":
+		data["auth"] = map[string]interface{}{
+			"project_id":        opts.Role.ProjectName,
+			"project_domain_id": user.DomainID,
+		}
+	default:
+		data["auth"] = map[string]interface{}{
+			"user_domain_id": user.DomainID,
+		}
+	}
+
+	for extensionKey, extensionValue := range opts.Role.Extensions {
+		data[extensionKey] = extensionValue
 	}
 
 	return &logical.Response{
