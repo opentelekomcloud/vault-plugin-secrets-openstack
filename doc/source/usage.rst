@@ -39,12 +39,12 @@ To configure a role that generates OSC root account token
 
 .. code-block:: console
 
-   $ vault write /openstack/role/role-root-user cloud=example-cloud project_name=myproject domain_name=mydomain root=true secret_type=token
+   $ vault write /openstack/role/role-root-user cloud=example-cloud project_name=myproject domain_name=mydomain root=true
    Success! Data written to: openstack/role/role-root-user
 
 After the secrets engine is configured and a user/machine has a Vault token
 with the proper permission, it can generate credentials. Depending on how the
-roleset was configured, you can generate OAuth2 tokens or service account keys.
+role was configured, you can generate OAuth2 tokens or service account keys.
 
 Requesting Access Tokens
 ------------------------
@@ -70,6 +70,6 @@ OSC APIs:
 
 .. code-block:: console
 
-   $ curl -H “X-Auth-Token: gARAVABiXW-4r2Ofy4s4-oFlnbNgIrqHNkmIHPnE...” https://127.0.0.1/v3/endpoints
+   $ curl -H "X-Auth-Token: gARAVABiXW-4r2Ofy4s4-oFlnbNgIrqHNkmIHPnE..." https://127.0.0.1/v3/endpoints
 
 

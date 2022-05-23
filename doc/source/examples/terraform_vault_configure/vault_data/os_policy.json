@@ -1,0 +1,3 @@
+{
+  "policy": "length = 12\nrule \"charset\" {\n  charset = \"abcdefghijklmnopqrstuvwxyz\"\n}\nrule \"charset\" {\n  charset = \"ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n}\nrule \"charset\" {\n  charset = \"0123456789\"\n}\nrule \"charset\" {\n  charset = \"!@#$%^&*\"\n}\n"
+}

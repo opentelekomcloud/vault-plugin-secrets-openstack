@@ -61,3 +61,4 @@ does no longer affect operations.
    configuration
    usage
    api.md
+   examples/index
