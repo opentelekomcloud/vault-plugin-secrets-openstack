@@ -5,7 +5,6 @@ package acceptance
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 
@@ -108,10 +107,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			raw := readJSONResponse(t, resp)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, raw)
-
-			log.Printf("CREDENTIALS RESPONSE: %+v", raw)
+			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
 
 			resp, err = p.vaultDo(
 				http.MethodDelete,
