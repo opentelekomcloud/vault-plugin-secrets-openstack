@@ -8,3 +8,4 @@ There are multiple possibilities how to start using the plugin.
 
    configure_tf
    use_tf
+   demo
