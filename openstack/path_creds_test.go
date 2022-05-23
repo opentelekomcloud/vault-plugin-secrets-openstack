@@ -120,7 +120,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, res.IsError(), res.Error())
 		require.NotEmpty(t, res.Data)
-		require.NotEmpty(t, res.Data["password"])
+		require.NotEmpty(t, res.Data["auth"])
 		require.NotEmpty(t, res.Secret.InternalData["user_id"])
 
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
