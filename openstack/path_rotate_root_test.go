@@ -36,7 +36,7 @@ func TestRotateRootCredentials_ok(t *testing.T) {
 
 	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "rotate-root/" + cloud.name,
-		Operation: logical.ReadOperation,
+		Operation: logical.CreateOperation,
 		Storage:   s,
 	})
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestRotateRootCredentials_error(t *testing.T) {
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Path:      "rotate-root/" + cloud.name,
-			Operation: logical.ReadOperation,
+			Operation: logical.CreateOperation,
 			Storage:   s,
 		})
 		require.Error(t, err)
@@ -100,7 +100,7 @@ func TestRotateRootCredentials_error(t *testing.T) {
 
 			_, err = b.HandleRequest(context.Background(), &logical.Request{
 				Path:      "rotate-root/" + cloud.name,
-				Operation: logical.ReadOperation,
+				Operation: logical.CreateOperation,
 				Storage:   s,
 			})
 			require.Error(t, err)
