@@ -106,11 +106,14 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 	}
 
 	data := map[string]interface{}{
-		"auth": map[string]interface{}{
-			"auth_url":         opts.Config.AuthURL,
-			"token":            token.ID,
-			"user_domain_name": opts.Config.UserDomainName,
-		},
+		"auth": formAuthResponse(
+			opts.Role,
+			"",
+			"",
+			token.ID,
+			opts.Config.AuthURL,
+			opts.Config.UserDomainName,
+		),
 		"auth_type": "token",
 	}
 	secret := &logical.Secret{
