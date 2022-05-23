@@ -39,13 +39,13 @@ func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: backendSecretTypeToken,
 		Fields: map[string]*framework.FieldSchema{
-			"token": {
-				Type:        framework.TypeString,
-				Description: "OpenStack Token.",
-			},
 			"cloud": {
 				Type:        framework.TypeString,
 				Description: "Used cloud.",
+			},
+			"auth": {
+				Type:        framework.TypeMap,
+				Description: "Auth entry for OpenStack clouds.yaml",
 			},
 		},
 		Revoke: b.tokenRevoke,
@@ -106,9 +106,12 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 	}
 
 	data := map[string]interface{}{
-		"auth_url":   opts.Config.AuthURL,
-		"token":      token.ID,
-		"expires_at": token.ExpiresAt.String(),
+		"auth": map[string]interface{}{
+			"auth_url":         opts.Config.AuthURL,
+			"token":            token.ID,
+			"user_domain_name": opts.Config.UserDomainName,
+		},
+		"auth_type": "token",
 	}
 	secret := &logical.Secret{
 		LeaseOptions: logical.LeaseOptions{
@@ -118,6 +121,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 		InternalData: map[string]interface{}{
 			"secret_type": backendSecretTypeToken,
 			"cloud":       opts.Config.Name,
+			"expires_at":  token.ExpiresAt.String(),
 		},
 	}
 	return &logical.Response{Data: data, Secret: secret}, nil
@@ -156,30 +160,33 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		}
 
 		data = map[string]interface{}{
-			"auth_url":   opts.Config.AuthURL,
-			"token":      token.ID,
-			"expires_at": token.ExpiresAt.String(),
+			"auth": formAuthResponse(
+				opts.Role,
+				"",
+				"",
+				token.ID,
+				opts.Config.AuthURL,
+				user.DomainID,
+			),
+			"auth_type": "token",
 		}
 		secretInternal = map[string]interface{}{
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
+			"expires_at":  token.ExpiresAt.String(),
 		}
 	case SecretPassword:
 		data = map[string]interface{}{
-			"auth_url": opts.Config.AuthURL,
-			"username": user.Name,
-			"password": password,
-		}
-		switch {
-		case opts.Role.ProjectID != "":
-			data["project_id"] = opts.Role.ProjectID
-			data["project_domain_id"] = user.DomainID
-		case opts.Role.ProjectName != "":
-			data["project_name"] = opts.Role.ProjectName
-			data["project_domain_id"] = user.DomainID
-		default:
-			data["user_domain_id"] = user.DomainID
+			"auth": formAuthResponse(
+				opts.Role,
+				user.Name,
+				password,
+				"",
+				opts.Config.AuthURL,
+				user.DomainID,
+			),
+			"auth_type": "password",
 		}
 
 		secretInternal = map[string]interface{}{
@@ -189,6 +196,10 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		}
 	default:
 		return nil, fmt.Errorf("invalid secret type: %s", r)
+	}
+
+	for extensionKey, extensionValue := range opts.Role.Extensions {
+		data[extensionKey] = extensionValue
 	}
 
 	return &logical.Response{
@@ -236,12 +247,13 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tokenRaw, ok := d.GetOk("token")
+	authInfoRaw, ok := d.GetOk("auth")
 	if !ok {
-		return nil, errors.New("data 'token' not found")
+		return nil, errors.New("data 'auth' not found")
 	}
 
-	token := tokenRaw.(string)
+	authInfo := authInfoRaw.(map[string]interface{})
+	token := authInfo["token"].(string)
 
 	cloudNameRaw, ok := r.Secret.InternalData["cloud"]
 	if !ok {
@@ -451,4 +463,36 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 		scope = tokens.Scope{}
 	}
 	return scope
+}
+
+func formAuthResponse(role *roleEntry, username, password, token, authURL, domainID string) map[string]interface{} {
+	var auth map[string]interface{}
+
+	switch {
+	case role.ProjectID != "":
+		auth = map[string]interface{}{
+			"project_id":        role.ProjectID,
+			"project_domain_id": domainID,
+		}
+	case role.ProjectName != "":
+		auth = map[string]interface{}{
+			"project_id":        role.ProjectName,
+			"project_domain_id": domainID,
+		}
+	default:
+		auth = map[string]interface{}{
+			"user_domain_id": domainID,
+		}
+	}
+
+	if token != "" {
+		auth["token"] = token
+	} else {
+		auth["username"] = username
+		auth["password"] = password
+	}
+
+	auth["auth_url"] = authURL
+
+	return auth
 }

@@ -57,7 +57,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Data)
-		assert.NotEmpty(t, res.Data["expires_at"])
+		assert.NotEmpty(t, res.Data["auth"])
 	})
 	t.Run("user_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
@@ -97,7 +97,9 @@ func TestCredentialsRead_ok(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Data)
-		require.Equal(t, res.Data["token"], testClient.TokenID)
+		require.NotEmpty(t, res.Data["auth"])
+		authInfo := res.Data["auth"].(map[string]interface{})
+		require.Equal(t, authInfo["token"], testClient.TokenID)
 
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.RevokeOperation,
@@ -120,7 +122,7 @@ func TestCredentialsRead_ok(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, res.IsError(), res.Error())
 		require.NotEmpty(t, res.Data)
-		require.NotEmpty(t, res.Data["password"])
+		require.NotEmpty(t, res.Data["auth"])
 		require.NotEmpty(t, res.Secret.InternalData["user_id"])
 
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
