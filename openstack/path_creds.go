@@ -471,12 +471,11 @@ func formAuthResponse(role *roleEntry, username, password, token, authURL, domai
 	switch {
 	case role.ProjectID != "":
 		auth = map[string]interface{}{
-			"project_id":        role.ProjectID,
-			"project_domain_id": domainID,
+			"project_id": role.ProjectID,
 		}
 	case role.ProjectName != "":
 		auth = map[string]interface{}{
-			"project_id":        role.ProjectName,
+			"project_name":      role.ProjectName,
 			"project_domain_id": domainID,
 		}
 	default:

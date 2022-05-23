@@ -133,9 +133,10 @@ $ curl \
 This endpoint creates or updates the role with the given `name`. If a role with the name does not exist, it will be
 created. If the role exists, it will be updated with the new attributes.
 
-| Method  | Path                    |
-|:--------|:------------------------|
-| `POST`  | `/openstack/role/:name` |
+| Method | Path                    |
+|:-------|:------------------------|
+| `POST` | `/openstack/role/:name` |
+| `PUT`  | `/openstack/role/:name` |
 
 ### Parameters
 
@@ -371,8 +372,13 @@ $ curl \
 ```json
 {
   "data": {
-    "auth_url": "https://example.com/v3/",
-    "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb..."
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb...",
+      "project_name": "test",
+      "project_domain_id": "Default"
+    },
+    "auth_type": "token"
   }
 }
 ```
@@ -382,11 +388,14 @@ $ curl \
 ```json
 {
   "data": {
-    "auth_url": "https://example.com/v3/",
-    "username": "admin",
-    "password": "RcigTiYrJjVmEkrV71Cd",
-    "project_name": "test",
-    "project_domain_name": "Default"
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "username": "admin",
+      "password": "RcigTiYrJjVmEkrV71Cd",
+      "project_name": "test",
+      "project_domain_id": "Default"
+    },
+    "auth_type": "password"
   }
 }
 ```
@@ -396,10 +405,13 @@ $ curl \
 ```json
 {
   "data": {
-    "auth_url": "https://example.com/v3/",
-    "username": "admin",
-    "password": "RcigTiYrJjVmEkrV71Cd",
-    "user_domain_name": "Default"
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "username": "admin",
+      "password": "RcigTiYrJjVmEkrV71Cd",
+      "user_domain_id": "Default"
+    },
+    "auth_type": "password"
   }
 }
 ```
