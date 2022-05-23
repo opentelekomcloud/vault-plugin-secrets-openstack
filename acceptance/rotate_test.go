@@ -68,7 +68,7 @@ func (p *PluginTest) TestRootRotate() {
 	newCloud := p.makeChildCloud(cloud)
 
 	r, err := p.vaultDo(
-		http.MethodGet,
+		http.MethodPost,
 		fmt.Sprintf("/v1/%s/rotate-root/%s", pluginAlias, newCloud.Name),
 		nil,
 	)
