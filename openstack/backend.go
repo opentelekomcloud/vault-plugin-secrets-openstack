@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -14,6 +15,7 @@ import (
 const (
 	backendSecretTypeToken = "openstack_token"
 	backendSecretTypeUser  = "openstack_user"
+	backendSecretTypeRoot  = "openstack_root"
 	backendHelp            = "OpenStack Token Backend"
 )
 
@@ -53,6 +55,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		Secrets: []*framework.Secret{
 			secretToken(b),
 			secretUser(b),
+			secretRoot(b),
 		},
 		BackendType: logical.TypeLogical,
 	}
@@ -132,11 +135,13 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 }
 
 type OsCloud struct {
-	Name             string `json:"name"`
-	AuthURL          string `json:"auth_url"`
-	UserDomainName   string `json:"user_domain_name"`
-	Username         string `json:"username"`
-	Password         string `json:"password"`
-	UsernameTemplate string `json:"username_template"`
-	PasswordPolicy   string `json:"password_policy"`
+	Name             string        `json:"name"`
+	AuthURL          string        `json:"auth_url"`
+	UserDomainName   string        `json:"user_domain_name"`
+	Username         string        `json:"username"`
+	Password         string        `json:"password"`
+	UsernameTemplate string        `json:"username_template"`
+	PasswordPolicy   string        `json:"password_policy"`
+	PasswordExpire   time.Duration `json:"password_expire"`
+	ValidateCloud    bool          `json:"validate_cloud"`
 }
