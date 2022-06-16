@@ -89,16 +89,6 @@ func TestSharedCloud_client(t *testing.T) {
 	testClient := thClient.ServiceClient()
 	_, s := testBackend(t)
 
-	t.Run("existing-client", func(t *testing.T) {
-		cloud := &sharedCloud{
-			client: thClient.ServiceClient(),
-			lock:   sync.Mutex{},
-		}
-		client, err := cloud.getClient(context.Background(), s)
-		assert.NoError(t, err)
-		assert.Equal(t, testClient, client)
-	})
-
 	t.Run("new-client", func(t *testing.T) {
 		authURL := testClient.Endpoint + "v3"
 
