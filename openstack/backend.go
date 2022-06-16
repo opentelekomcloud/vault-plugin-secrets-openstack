@@ -85,12 +85,7 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.client != nil {
-		return c.client, nil
-	}
-
-	err := c.initClient(ctx, s)
-	if err != nil {
+	if err := c.initClient(ctx, s); err != nil {
 		return nil, err
 	}
 
