@@ -7,6 +7,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -86,12 +87,20 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	defer c.lock.Unlock()
 
 	if c.client != nil {
-		return c.client, nil
-	}
+		valid, err := tokens.Validate(c.client, c.client.Token())
+		if err != nil {
+			return nil, err
+		}
 
-	err := c.initClient(ctx, s)
-	if err != nil {
-		return nil, err
+		if !valid {
+			if err := c.initClient(ctx, s); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if err := c.initClient(ctx, s); err != nil {
+			return nil, err
+		}
 	}
 
 	return c.client, nil
