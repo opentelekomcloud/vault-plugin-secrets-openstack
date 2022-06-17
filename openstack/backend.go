@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"sync"
 
 	"github.com/gophercloud/gophercloud"
@@ -85,8 +86,21 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.initClient(ctx, s); err != nil {
-		return nil, err
+	if c.client != nil {
+		valid, err := tokens.Validate(c.client, c.client.Token())
+		if err != nil {
+			return nil, err
+		}
+
+		if !valid {
+			if err := c.initClient(ctx, s); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if err := c.initClient(ctx, s); err != nil {
+			return nil, err
+		}
 	}
 
 	return c.client, nil
