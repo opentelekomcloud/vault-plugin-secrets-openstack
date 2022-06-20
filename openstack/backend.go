@@ -89,7 +89,7 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	defer c.lock.Unlock()
 
 	if c.client != nil {
-		diff := time.Now().Sub(c.expiresAt)
+		diff := time.Since(c.expiresAt)
 		if diff.Seconds() <= -120 {
 			return c.client, nil
 		}
