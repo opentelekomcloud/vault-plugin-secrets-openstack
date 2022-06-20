@@ -26,8 +26,11 @@ After that it is possible to register the plugin and proceed with the
 configuration.
 
 .. code-block:: console
+
    $ export SHA256=$(shasum -a 256 "/etc/vault/plugins/vault-plugin-secrets-openstack" | cut -d' ' -f1)
    $ vault plugin register -sha256="${SHA256}" secret vault-plugin-secrets-openstack
+
+Now we need to enable the plugin.
 
 .. code-block:: console
 
