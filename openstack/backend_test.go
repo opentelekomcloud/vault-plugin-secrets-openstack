@@ -89,27 +89,6 @@ func TestSharedCloud_client(t *testing.T) {
 	testClient := thClient.ServiceClient()
 	_, s := testBackend(t)
 
-	t.Run("existing-client", func(t *testing.T) {
-		cloud := &sharedCloud{
-			client: thClient.ServiceClient(),
-			lock:   sync.Mutex{},
-		}
-
-		th.Mux.HandleFunc("/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
-			th.TestMethod(t, r, "HEAD")
-			th.TestHeaderUnset(t, r, "Content-Type")
-			th.TestHeader(t, r, "Accept", "application/json")
-			th.TestHeader(t, r, "X-Auth-Token", thClient.TokenID)
-			th.TestHeader(t, r, "X-Subject-Token", thClient.TokenID)
-
-			w.WriteHeader(http.StatusNoContent)
-		})
-
-		client, err := cloud.getClient(context.Background(), s)
-		assert.NoError(t, err)
-		assert.Equal(t, testClient, client)
-	})
-
 	t.Run("new-client", func(t *testing.T) {
 		authURL := testClient.Endpoint + "v3"
 
