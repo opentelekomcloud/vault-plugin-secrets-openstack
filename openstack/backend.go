@@ -3,12 +3,12 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"sync"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
