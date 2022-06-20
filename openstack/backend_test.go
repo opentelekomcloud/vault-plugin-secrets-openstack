@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/acceptance/tools"
@@ -91,8 +92,9 @@ func TestSharedCloud_client(t *testing.T) {
 
 	t.Run("existing-client", func(t *testing.T) {
 		cloud := &sharedCloud{
-			client: thClient.ServiceClient(),
-			lock:   sync.Mutex{},
+			client:    thClient.ServiceClient(),
+			expiresAt: time.Now().Add(time.Hour),
+			lock:      sync.Mutex{},
 		}
 
 		client, err := cloud.getClient(context.Background(), s)
