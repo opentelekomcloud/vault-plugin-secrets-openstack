@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -21,8 +22,9 @@ const (
 type sharedCloud struct {
 	name string
 
-	client *gophercloud.ServiceClient
-	lock   sync.Mutex
+	client    *gophercloud.ServiceClient
+	expiresAt time.Time
+	lock      sync.Mutex
 
 	passwords *Passwords
 }
@@ -87,20 +89,14 @@ func (c *sharedCloud) getClient(ctx context.Context, s logical.Storage) (*gopher
 	defer c.lock.Unlock()
 
 	if c.client != nil {
-		valid, err := tokens.Validate(c.client, c.client.Token())
-		if err != nil {
-			return nil, err
+		diff := time.Since(c.expiresAt)
+		if diff.Seconds() <= -120 {
+			return c.client, nil
 		}
+	}
 
-		if !valid {
-			if err := c.initClient(ctx, s); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		if err := c.initClient(ctx, s); err != nil {
-			return nil, err
-		}
+	if err := c.initClient(ctx, s); err != nil {
+		return nil, err
 	}
 
 	return c.client, nil
@@ -135,6 +131,13 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("error creating service client: %w", err)
 	}
 
+	tokenResponse := tokens.Get(sClient, sClient.Token())
+	token, err := tokenResponse.ExtractToken()
+	if err != nil {
+		return err
+	}
+
+	c.expiresAt = token.ExpiresAt
 	c.client = sClient
 
 	return nil

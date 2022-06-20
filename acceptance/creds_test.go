@@ -110,6 +110,14 @@ func (p *PluginTest) TestCredsLifecycle() {
 			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
 
 			resp, err = p.vaultDo(
+				http.MethodPost,
+				"/v1/sys/leases/revoke-force/openstack/creds",
+				nil,
+			)
+			require.NoError(t, err)
+			assertStatusCode(t, http.StatusNoContent, resp)
+
+			resp, err = p.vaultDo(
 				http.MethodDelete,
 				roleURL(roleName),
 				nil,
