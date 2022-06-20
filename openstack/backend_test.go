@@ -89,16 +89,29 @@ func TestSharedCloud_client(t *testing.T) {
 	testClient := thClient.ServiceClient()
 	_, s := testBackend(t)
 
+	t.Run("existing-client", func(t *testing.T) {
+		cloud := &sharedCloud{
+			client: thClient.ServiceClient(),
+			lock:   sync.Mutex{},
+		}
+
+		client, err := cloud.getClient(context.Background(), s)
+		assert.NoError(t, err)
+		assert.Equal(t, testClient, client)
+	})
+
 	t.Run("new-client", func(t *testing.T) {
 		authURL := testClient.Endpoint + "v3"
 
 		th.Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
-			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "Content-Type", "application/json")
-			th.TestHeader(t, r, "Accept", "application/json")
+			switch r.Method {
+			case "POST":
+				th.TestMethod(t, r, "POST")
+				th.TestHeader(t, r, "Content-Type", "application/json")
+				th.TestHeader(t, r, "Accept", "application/json")
 
-			w.WriteHeader(http.StatusCreated)
-			_, _ = fmt.Fprintf(w, `
+				w.WriteHeader(http.StatusCreated)
+				_, _ = fmt.Fprintf(w, `
 {
   "token": {
     "expires_at": "2014-10-02T13:45:00.000000Z",
@@ -121,6 +134,18 @@ func TestSharedCloud_client(t *testing.T) {
   }
 }
 `, authURL)
+			case "GET":
+				th.TestMethod(t, r, "GET")
+
+				w.WriteHeader(http.StatusOK)
+				_, _ = fmt.Fprint(w, `
+{
+  "token": {
+    "expires_at": "2023-10-02T13:45:00.000000Z"
+  }
+}
+`)
+			}
 		})
 
 		cloud := &sharedCloud{name: tools.RandomString("cl", 5)}
