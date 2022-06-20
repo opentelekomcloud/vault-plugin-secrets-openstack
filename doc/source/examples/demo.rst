@@ -12,14 +12,14 @@ perform invoke Terraform to query image_id for the image by name.
 
   .. code-block:: console
 
-     wget https://github.com/opentelekomcloud/vault-plugin-secrets-openstack/releases/download/v1.0.2/vault-plugin-secrets-openstack_1.0.2_linux_amd64.tar.gz
-     tar xvf vault-plugin-secrets-openstack_1.0.2_linux_arm64.tar.gz -C /opt/vault/plugins
+     $ wget https://github.com/opentelekomcloud/vault-plugin-secrets-openstack/releases/download/v1.1.2/vault-plugin-secrets-openstack_1.1.2_linux_amd64.tar.gz
+     $ tar xvf vault-plugin-secrets-openstack_1.1.2_linux_amd64.tar.gz -C /opt/vault/plugins
 
 - Register the plugin
 
   .. code-block::
 
-     vault secrets enable -path="openstack" -plugin-name="vault-plugin-secrets-openstack" plugin
+     $ vault secrets enable -path="openstack" -plugin-name="vault-plugin-secrets-openstack" plugin
 
 - Register password policy
 
@@ -46,20 +46,20 @@ perform invoke Terraform to query image_id for the image by name.
 
   .. code-block:: console
 
-     vault write sys/policies/password/os-policy policy=@os_policy.hcl
+     $ vault write sys/policies/password/os-policy policy=@os_policy.hcl
 
 
 - Configure cloud root account
 
   .. code-block::
 
-     vault write openstack/cloud/demo auth_url=https://<AUTH_URL> username=<USER> password=<PASSWORD> user_domain_name=<USER_DOMAIN_NAME> password_policy=os-policy
+     $ vault write openstack/cloud/demo auth_url=https://<AUTH_URL> username=<USER> password=<PASSWORD> user_domain_name=<USER_DOMAIN_NAME> password_policy=os-policy
 
 - Configure root token role
 
   .. code-block:: console
 
-     vault write /openstack/role/root_token cloud=demo project_name=<PROJECT_NAME> domain_name=<DOMAIN_NAME> root=true
+     $ vault write /openstack/role/root_token cloud=demo project_name=<PROJECT_NAME> domain_name=<DOMAIN_NAME> root=true
 
 - Prepare Terraform configuration
 
@@ -79,4 +79,4 @@ perform invoke Terraform to query image_id for the image by name.
 
   .. code-block:: console
 
-     terraform apply
+     $ terraform apply
