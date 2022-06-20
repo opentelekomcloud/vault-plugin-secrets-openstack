@@ -7,9 +7,10 @@
 This endpoint configures the root credentials to communicate with OpenStack instance. If credentials already exist, this
 will overwrite them.
 
-| Method   | Path                      |
-|:---------|:--------------------------|
-| `POST`   | `/openstack/cloud/:cloud` |
+| Method | Path                      |
+|:-------|:--------------------------|
+| `POST` | `/openstack/cloud/:cloud` |
+| `PUT`  | `/openstack/cloud/:cloud` |
 
 ### Parameters
 
@@ -21,12 +22,12 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `username_template` `(string: "vault{{random 8 | lowercase}}")` - Template used for usernames 
-  of temporary users. For details on templating syntax please refer to 
-  [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating). Additional 
+* `username_template` `(string: "vault{{random 8 | lowercase}}")` - Template used for usernames
+  of temporary users. For details on templating syntax please refer to
+  [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating). Additional
   fields available for the template are `.CloudName`, `.RoleName`.
 
-* `password_policy` `(string: <optional>)` - Specifies a password policy name to use when creating dynamic credentials. 
+* `password_policy` `(string: <optional>)` - Specifies a password policy name to use when creating dynamic credentials.
   Defaults to generating an alphanumeric password if not set. For details on password policies please refer
   to [Password Policies](https://www.vaultproject.io/docs/concepts/password-policies).
 
@@ -103,7 +104,10 @@ $ curl \
 ```json
 {
   "data": {
-    "keys": ["sample-cloud-1", "sample-cloud-2"]  
+    "keys": [
+      "sample-cloud-1",
+      "sample-cloud-2"
+    ]
   }
 }
 ```
@@ -249,7 +253,7 @@ $ curl \
 }
 ```
 
-or 
+or
 
 ```json
 {
@@ -273,7 +277,6 @@ This endpoint queries an existing role by the given name. If the role does not e
 | Method   | Path                    |
 |:---------|:------------------------|
 | `GET`    | `/openstack/role/:name` |
-
 
 ### Parameters
 
@@ -313,7 +316,6 @@ This endpoint queries an existing role by the given name. If the role does not e
 | `LIST` | `/openstack/roles` |
 | `GET`  | `/openstack/roles` |
 
-
 ### Parameters
 
 - `cloud` `(string: <optional>)` – Specifies the name of the role to read. This is part of the request URL.
@@ -341,7 +343,10 @@ $ curl \
 ```json
 {
   "data": {
-    "keys": ["default-cloud-role-1", "default-cloud-role-2"]
+    "keys": [
+      "default-cloud-role-1",
+      "default-cloud-role-2"
+    ]
   }
 }
 ```
