@@ -210,6 +210,7 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"root":         src.Root,
 		"ttl":          src.TTL,
 		"secret_type":  string(src.SecretType),
+		"username":     src.Username,
 		"user_groups":  src.UserGroups,
 		"user_roles":   src.UserRoles,
 		"project_id":   src.ProjectID,

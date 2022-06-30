@@ -3,12 +3,12 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-uuid"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
@@ -31,6 +31,10 @@ func randomRoleName() string {
 	return tools.RandomString("k", 5) + "m"
 }
 
+func randomUsername() string {
+	return tools.RandomString("u", 5)
+}
+
 func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 	expTTL := time.Hour
 	expected := &roleEntry{
@@ -42,6 +46,7 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 	expectedMap := map[string]interface{}{
 		"cloud":        expected.Cloud,
 		"ttl":          expTTL,
+		"username":     "",
 		"project_id":   "",
 		"project_name": expected.ProjectName,
 		"domain_id":    "",
@@ -348,6 +353,14 @@ func TestRoleCreate(t *testing.T) {
 				SecretType:  SecretToken,
 				UserGroups:  []string{"default", "testing"},
 				TTL:         24 * time.Hour,
+			},
+			"username": {
+				Name:        randomRoleName(),
+				Cloud:       cloudName,
+				ProjectName: randomRoleName(),
+				Username:    randomUsername(),
+				SecretType:  SecretToken,
+				UserGroups:  []string{"default", "testing"},
 			},
 			"endpoint-override": {
 				Name:      randomRoleName(),
