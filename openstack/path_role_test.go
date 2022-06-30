@@ -3,12 +3,12 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"

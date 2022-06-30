@@ -5,10 +5,10 @@ package acceptance
 
 import (
 	"fmt"
-	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"net/http"
 	"testing"
 
+	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
