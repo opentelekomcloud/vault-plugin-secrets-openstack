@@ -187,6 +187,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
 			"expires_at":  token.ExpiresAt.String(),
+			"static":      static,
 		}
 	case SecretPassword:
 		authResponse := &authResponseData{
@@ -207,6 +208,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
+			"static":      static,
 		}
 	default:
 		return nil, fmt.Errorf("invalid secret type: %s", r)
