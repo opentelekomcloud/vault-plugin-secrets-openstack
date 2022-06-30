@@ -138,9 +138,14 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		return nil, err
 	}
 
-	username, err := RandomTemporaryUsername(opts.UsernameTemplate, opts.Role)
-	if err != nil {
-		return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
+	username := opts.Role.Username
+	static := true
+	if username == "" {
+		username, err = RandomTemporaryUsername(opts.UsernameTemplate, opts.Role)
+		if err != nil {
+			return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
+		}
+		static = false
 	}
 
 	user, err := createUser(client, username, password, opts.Role)
@@ -211,15 +216,19 @@ func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (
 		data[extensionKey] = extensionValue
 	}
 
+	secret := &logical.Secret{
+		InternalData: secretInternal,
+	}
+	if !static {
+		secret.LeaseOptions = logical.LeaseOptions{
+			TTL:       opts.Role.TTL * time.Second,
+			IssueTime: time.Now(),
+		}
+	}
+
 	return &logical.Response{
-		Data: data,
-		Secret: &logical.Secret{
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       opts.Role.TTL * time.Second,
-				IssueTime: time.Now(),
-			},
-			InternalData: secretInternal,
-		},
+		Data:   data,
+		Secret: secret,
 	}, nil
 }
 
