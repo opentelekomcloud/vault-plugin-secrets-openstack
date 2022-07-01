@@ -515,8 +515,14 @@ func formAuthResponse(role *roleEntry, authResponse *authResponseData) map[strin
 			}
 		}
 	default:
-		auth = map[string]interface{}{
-			"user_domain_id": authResponse.DomainID,
+		if role.Root {
+			auth = map[string]interface{}{
+				"user_domain_name": authResponse.DomainName,
+			}
+		} else {
+			auth = map[string]interface{}{
+				"user_domain_id": authResponse.DomainID,
+			}
 		}
 	}
 
