@@ -154,10 +154,6 @@ created. If the role exists, it will be updated with the new attributes.
   If set to `true`, `user_groups` value is ignored.
   if set to `true`, `user_roles` value is ignored.
   If set to `true`, `ttl` value is ignored.
-  If set to `true`, `username` value is ignored.
-
-- `username` `(string: <optional>)` - Specifies the `username` for the static user. If `username` is
-  specified then `username_template` in `cloud` path will not work.
 
 - `ttl` `(string: "1h")` - Specifies TTL value for the dynamically created users as a
   string duration with time suffix.
@@ -240,21 +236,6 @@ $ curl \
 }
 ```
 
-#### Creating a static role with password-based access
-
-```json
-{
-  "cloud": "example-cloud",
-  "project_name": "test",
-  "username": "vault-dns",
-  "secret_type": "password",
-  "user_groups": [
-    "default",
-    "testing"
-  ]
-}
-```
-
 #### Creating a role with endpoint override
 
 ```json
@@ -316,7 +297,6 @@ $ curl \
   "cloud": "example-cloud",
   "root": false,
   "secret_type": "password",
-  "username": "",
   "project_name": "test",
   "domain_name": "test",
   "user_groups": [
