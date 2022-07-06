@@ -58,6 +58,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 			secretUser(b),
 		},
 		BackendType: logical.TypeLogical,
+
+		PeriodicFunc: b.periodicFunc,
 	}
 
 	if err := b.Setup(ctx, conf); err != nil {
@@ -139,6 +141,12 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 
 	c.expiresAt = token.ExpiresAt
 	c.client = sClient
+
+	return nil
+}
+
+func (b *backend) periodicFunc(_ context.Context, _ *logical.Request) error {
+	b.Logger().Debug("starting periodic func.")
 
 	return nil
 }
