@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +16,6 @@ import (
 
 type testCase struct {
 	Cloud      string
-	Username   string
 	ProjectID  string
 	DomainID   string
 	Root       bool
@@ -54,29 +52,6 @@ func (p *PluginTest) TestCredsLifecycle() {
 		},
 		"user_password": {
 			Cloud:      cloud.Name,
-			ProjectID:  aux.ProjectID,
-			DomainID:   aux.DomainID,
-			Root:       false,
-			SecretType: "password",
-			Extensions: map[string]interface{}{
-				"object_store_endpoint_override": "https://swift.example.com",
-			},
-		},
-		"static_user_token": {
-			Cloud:      cloud.Name,
-			Username:   tools.RandomString("vault-iam-", 3),
-			ProjectID:  aux.ProjectID,
-			DomainID:   aux.DomainID,
-			Root:       false,
-			SecretType: "token",
-			UserRoles:  []string{"member"},
-			Extensions: map[string]interface{}{
-				"identity_api_version": "3",
-			},
-		},
-		"static_user_password": {
-			Cloud:      cloud.Name,
-			Username:   tools.RandomString("vault-iam-", 3),
 			ProjectID:  aux.ProjectID,
 			DomainID:   aux.DomainID,
 			Root:       false,
@@ -180,7 +155,6 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 func cloudToRoleMap(data testCase) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
 		"cloud":       data.Cloud,
-		"username":    data.Username,
 		"project_id":  data.ProjectID,
 		"domain_id":   data.DomainID,
 		"root":        data.Root,
