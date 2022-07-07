@@ -2,9 +2,13 @@ package openstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"time"
 )
 
 const (
@@ -54,6 +58,23 @@ func (cloud *OsCloud) save(ctx context.Context, s logical.Storage) error {
 	return s.Put(ctx, entry)
 }
 
+func secretRoot(b *backend) *framework.Secret {
+	return &framework.Secret{
+		Type: backendSecretTypeRoot,
+		Fields: map[string]*framework.FieldSchema{
+			"password": {
+				Type:        framework.TypeString,
+				Description: "OpenStack password of the root user.",
+			},
+			"cloud": {
+				Type:        framework.TypeString,
+				Description: "Used cloud.",
+			},
+		},
+		Renew: b.rootRenew,
+	}
+}
+
 func (b *backend) pathCloud() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s/%s", pathCloud, framework.GenericNameWithAtRegex("name")),
@@ -94,6 +115,16 @@ func (b *backend) pathCloud() *framework.Path {
 			"password_policy": {
 				Type:        framework.TypeString,
 				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
+			},
+			"password_expire": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Specifies password expire duration for the root user as a string duration with time suffix.",
+				Default:     "30d",
+			},
+			"validate_cloud": {
+				Type:        framework.TypeBool,
+				Description: "Specifies whether to try to authenticate with root credentials.",
+				Default:     false,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -182,17 +213,46 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
 		cloudConfig.PasswordPolicy = pwdPolicy.(string)
 	}
+	if passwordExpire, ok := d.GetOk("password_expire"); ok {
+		cloudConfig.PasswordExpire = time.Duration(passwordExpire.(int))
+	} else if r.Operation == logical.CreateOperation {
+		cloudConfig.PasswordExpire = (30 * 24 * time.Hour) / time.Second
+	}
+	if validateCloud, ok := d.GetOk("validate_cloud"); ok {
+		cloudConfig.ValidateCloud = validateCloud.(bool)
+	} else if r.Operation == logical.CreateOperation {
+		cloudConfig.ValidateCloud = false
+	}
 
 	sCloud.passwords = &Passwords{
 		PolicyGenerator: b.System(),
 		PolicyName:      cloudConfig.PasswordPolicy,
 	}
 
+	if cloudConfig.ValidateCloud {
+		if err := validateRootCloud(cloudConfig); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
 	if err := cloudConfig.save(ctx, r.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       cloudConfig.PasswordExpire,
+				Renewable: true,
+				IssueTime: time.Now(),
+			},
+			InternalData: map[string]interface{}{
+				"secret_type": backendSecretTypeRoot,
+				"password":    cloudConfig.Password,
+				"cloud":       cloudConfig.Name,
+			},
+		},
+	}, nil
 }
 
 func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -212,6 +272,8 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 			"username":          cloudConfig.Username,
 			"username_template": cloudConfig.UsernameTemplate,
 			"password_policy":   cloudConfig.PasswordPolicy,
+			"password_expire":   cloudConfig.PasswordExpire,
+			"validate_cloud":    cloudConfig.ValidateCloud,
 		},
 	}, nil
 }
@@ -233,4 +295,32 @@ func (b *backend) pathCloudList(ctx context.Context, r *logical.Request, _ *fram
 	}
 
 	return logical.ListResponse(clouds), nil
+}
+
+func (b *backend) rootRenew(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	userIDRaw, ok := r.Data.InternalData["cloud"]
+	if !ok {
+		return nil, errors.New("internal data 'cloud' not found")
+	}
+
+	return &logical.Response{}, nil
+}
+
+func validateRootCloud(cloud *OsCloud) error {
+	opts := gophercloud.AuthOptions{
+		IdentityEndpoint: cloud.AuthURL,
+		Username:         cloud.Username,
+		Password:         cloud.Password,
+		DomainName:       cloud.UserDomainName,
+		Scope: &gophercloud.AuthScope{
+			DomainName: cloud.UserDomainName,
+		},
+	}
+
+	_, err := openstack.AuthenticatedClient(opts)
+	if err != nil {
+		return fmt.Errorf("error authenticate root user: %w", err)
+	}
+
+	return nil
 }
