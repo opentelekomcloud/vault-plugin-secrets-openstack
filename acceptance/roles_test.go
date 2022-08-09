@@ -61,6 +61,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 			roleURL(roleName),
 			data,
 		)
+		time.Sleep(100 * time.Second)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 	})

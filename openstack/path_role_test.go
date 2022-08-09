@@ -23,16 +23,13 @@ func rolePath(name string) string {
 func TestRoleStoragePath(t *testing.T) {
 	name := tools.RandomString("role", 5)
 	expected := "roles/" + name
-	actual := roleStoragePath(name)
+	request := logical.Request{Path: rolesStoragePath}
+	actual := roleStoragePath(name, &request)
 	assert.Equal(t, actual, expected)
 }
 
 func randomRoleName() string {
 	return tools.RandomString("k", 5) + "m"
-}
-
-func randomUsername() string {
-	return tools.RandomString("u", 5)
 }
 
 func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
@@ -46,7 +43,6 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 	expectedMap := map[string]interface{}{
 		"cloud":        expected.Cloud,
 		"ttl":          expTTL,
-		"username":     "",
 		"project_id":   "",
 		"project_name": expected.ProjectName,
 		"domain_id":    "",
@@ -61,7 +57,8 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 }
 
 func saveRawRole(t *testing.T, name string, raw map[string]interface{}, s logical.Storage) {
-	storeEntry, err := logical.StorageEntryJSON(roleStoragePath(name), raw)
+	request := logical.Request{Path: rolesStoragePath}
+	storeEntry, err := logical.StorageEntryJSON(roleStoragePath(name, &request), raw)
 	require.NoError(t, err)
 	require.NoError(t, s.Put(context.Background(), storeEntry))
 }
@@ -354,14 +351,6 @@ func TestRoleCreate(t *testing.T) {
 				UserGroups:  []string{"default", "testing"},
 				TTL:         24 * time.Hour,
 			},
-			"username": {
-				Name:        randomRoleName(),
-				Cloud:       cloudName,
-				ProjectName: randomRoleName(),
-				Username:    randomUsername(),
-				SecretType:  SecretToken,
-				UserGroups:  []string{"default", "testing"},
-			},
 			"endpoint-override": {
 				Name:      randomRoleName(),
 				Cloud:     cloudName,
@@ -390,7 +379,8 @@ func TestRoleCreate(t *testing.T) {
 				require.NoError(t, err)
 				require.Empty(t, resp)
 
-				entry, err := s.Get(context.Background(), roleStoragePath(roleName))
+				request := logical.Request{Path: rolesStoragePath}
+				entry, err := s.Get(context.Background(), roleStoragePath(roleName, &request))
 				require.NoError(t, err)
 				require.NotEmpty(t, entry)
 				role := new(roleEntry)
@@ -498,7 +488,8 @@ func TestRoleCreate(t *testing.T) {
 		t.Parallel()
 
 		d, _ := expectedRoleData(randomRoleName())
-		err := saveRole(context.Background(), d, s)
+		req := logical.Request{Path: rolesStoragePath, Storage: s}
+		err := saveRole(context.Background(), d, &req)
 		require.Error(t, err)
 	})
 }

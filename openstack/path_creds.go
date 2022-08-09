@@ -132,20 +132,15 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
+func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
 	password, err := opts.PwdGenerator.Generate(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	username := opts.Role.Username
-	static := true
-	if username == "" {
-		username, err = RandomTemporaryUsername(opts.UsernameTemplate, opts.Role)
-		if err != nil {
-			return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
-		}
-		static = false
+	username, err := RandomTemporaryUsername(opts.UsernameTemplate, opts.Role)
+	if err != nil {
+		return logical.ErrorResponse("error generating username for temporary user: %s", err), nil
 	}
 
 	user, err := createUser(client, username, password, opts.Role)
@@ -187,7 +182,6 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
 			"expires_at":  token.ExpiresAt.String(),
-			"static":      static,
 		}
 	case SecretPassword:
 		authResponse := &authResponseData{
@@ -208,7 +202,6 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 			"secret_type": backendSecretTypeUser,
 			"user_id":     user.ID,
 			"cloud":       opts.Config.Name,
-			"static":      static,
 		}
 	default:
 		return nil, fmt.Errorf("invalid secret type: %s", r)
@@ -218,25 +211,21 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 		data[extensionKey] = extensionValue
 	}
 
-	secret := &logical.Secret{
-		InternalData: secretInternal,
-	}
-	if !static {
-		secret.LeaseOptions = logical.LeaseOptions{
-			TTL:       opts.Role.TTL * time.Second,
-			IssueTime: time.Now(),
-		}
-	}
-
 	return &logical.Response{
-		Data:   data,
-		Secret: secret,
+		Data: data,
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       opts.Role.TTL * time.Second,
+				IssueTime: time.Now(),
+			},
+			InternalData: secretInternal,
+		},
 	}, nil
 }
 
 func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r.Storage)
+	role, err := getRoleByName(ctx, roleName, r)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +252,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return getRootCredentials(client, opts)
 	}
 
-	return getUserCredentials(client, opts)
+	return getTmpUserCredentials(client, opts)
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
