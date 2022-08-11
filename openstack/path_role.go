@@ -135,7 +135,6 @@ type roleEntry struct {
 	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
 	TTL         time.Duration     `json:"ttl,omitempty"`
-	Secret      string            `json:"secret,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
 	UserGroups  []string          `json:"user_groups"`
 	UserRoles   []string          `json:"user_roles"`
@@ -218,10 +217,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var cloudName string
-	static := false
-	if strings.HasPrefix(req.Path, "static-role") {
-		static = true
-	}
 	if cloud, ok := d.GetOk("cloud"); ok {
 		cloudName = cloud.(string)
 	} else {
@@ -278,10 +273,6 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.SecretType = SecretToken
 	}
 
-	if secret, ok := d.GetOk("secret"); ok && static {
-		entry.Secret = secret.(string)
-	}
-
 	if name, ok := d.GetOk("project_name"); ok {
 		entry.ProjectName = name.(string)
 	}
@@ -333,6 +324,35 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 	if entry == nil {
 		return &logical.Response{}, nil
 	}
+
+	//storagePath := roleStoragePath(name, req)
+	//if strings.Contains(storagePath, staticRolesStoragePath) {
+	//	role, err := getRoleByName(ctx, name, req)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	sharedCloud := b.getSharedCloud(role.Cloud)
+	//	client, err := sharedCloud.getClient(ctx, req.Storage)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	user, err := getUserInfoByName(ctx, name, req)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	delUser := deleteUser(client, user.User.ID)
+	//	if delUser != nil {
+	//		return nil, err
+	//	}
+	//
+	//	err = req.Storage.Delete(ctx, staticCredsStoragePath(name))
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	err = req.Storage.Delete(ctx, roleStoragePath(name, req))
 	return nil, err
@@ -390,6 +410,12 @@ func defaultFieldSchemas() map[string]*framework.FieldSchema {
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Specifies list of existing OpenStack roles this Vault role is allowed to assume.",
 		},
+		"secret_type": {
+			Type:          framework.TypeLowerCaseString,
+			Description:   "Specifies what kind of secret will configuration contain.",
+			AllowedValues: []interface{}{"token", "password"},
+			Default:       SecretToken,
+		},
 		"project_id": {
 			Type:        framework.TypeLowerCaseString,
 			Description: "Specifies a project ID for project-scoped role.",
@@ -421,12 +447,6 @@ func dynamicFieldSchemas() map[string]*framework.FieldSchema {
 		Description: "Specifies TTL value for the dynamically created users as a string duration with time suffix.",
 		Default:     "1h",
 	}
-	dynamicFieldSchemas["secret_type"] = &framework.FieldSchema{
-		Type:          framework.TypeLowerCaseString,
-		Description:   "Specifies what kind of secret will configuration contain.",
-		AllowedValues: []interface{}{"token", "password"},
-		Default:       SecretToken,
-	}
 	return dynamicFieldSchemas
 }
 
@@ -436,10 +456,6 @@ func staticFieldSchemas() map[string]*framework.FieldSchema {
 		Type:        framework.TypeDurationSecond,
 		Description: "Specifies the amount of time Vault should wait before rotating the password.",
 		Default:     "1h",
-	}
-	staticFieldSchemas["secret"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: "Specifies the secret to be stored for a static role.",
 	}
 	return staticFieldSchemas
 }

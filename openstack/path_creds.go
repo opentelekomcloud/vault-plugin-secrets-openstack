@@ -132,7 +132,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 	return &logical.Response{Data: data, Secret: secret}, nil
 }
 
-func getTmpUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
+func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*logical.Response, error) {
 	password, err := opts.PwdGenerator.Generate(context.Background())
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 		return getRootCredentials(client, opts)
 	}
 
-	return getTmpUserCredentials(client, opts)
+	return getUserCredentials(client, opts)
 }
 
 func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -380,6 +380,14 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 	}
 
 	return newUser, nil
+}
+
+func deleteUser(client *gophercloud.ServiceClient, userId string) error {
+	deleteUser := users.Delete(client, userId)
+	if deleteUser.Err != nil {
+		return deleteUser.Err
+	}
+	return nil
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
