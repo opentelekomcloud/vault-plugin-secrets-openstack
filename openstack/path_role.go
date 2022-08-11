@@ -135,6 +135,7 @@ type roleEntry struct {
 	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
 	TTL         time.Duration     `json:"ttl,omitempty"`
+	Secret      string            `json:"secret,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
 	UserGroups  []string          `json:"user_groups"`
 	UserRoles   []string          `json:"user_roles"`
@@ -146,9 +147,9 @@ type roleEntry struct {
 }
 
 func roleStoragePath(name string, req *logical.Request) string {
-	storagePath := rolesStoragePath
-	if strings.HasPrefix(req.Path, staticRolesStoragePath) {
-		storagePath = staticRolesStoragePath
+	storagePath := "roles"
+	if strings.HasPrefix(req.Path, "static") {
+		storagePath = "static-roles"
 	}
 
 	return fmt.Sprintf("%s/%s", storagePath, name)
@@ -217,6 +218,10 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var cloudName string
+	static := false
+	if strings.HasPrefix(req.Path, "static-role") {
+		static = true
+	}
 	if cloud, ok := d.GetOk("cloud"); ok {
 		cloudName = cloud.(string)
 	} else {
@@ -233,6 +238,9 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("name is required"), nil
+	}
 
 	entry, err := getRoleByName(ctx, name, req)
 	if err != nil {
@@ -268,6 +276,10 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.SecretType = secretType(typ.(string))
 	} else if req.Operation == logical.CreateOperation {
 		entry.SecretType = SecretToken
+	}
+
+	if secret, ok := d.GetOk("secret"); ok && static {
+		entry.Secret = secret.(string)
 	}
 
 	if name, ok := d.GetOk("project_name"); ok {
@@ -424,6 +436,10 @@ func staticFieldSchemas() map[string]*framework.FieldSchema {
 		Type:        framework.TypeDurationSecond,
 		Description: "Specifies the amount of time Vault should wait before rotating the password.",
 		Default:     "1h",
+	}
+	staticFieldSchemas["secret"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "Specifies the secret to be stored for a static role.",
 	}
 	return staticFieldSchemas
 }
