@@ -53,14 +53,6 @@ func roleToStaticMap(src *roleEntry) map[string]interface{} {
 }
 
 func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	//entry, err := getRole(ctx, d, r)
-	//if err != nil {
-	//	return nil, errRoleGet
-	//}
-	//if entry == nil {
-	//	return logical.ErrorResponse("role not found"), nil
-	//}
-
 	roleName := d.Get("role").(string)
 	entry, err := getRoleByName(ctx, roleName, r)
 	if err != nil {
