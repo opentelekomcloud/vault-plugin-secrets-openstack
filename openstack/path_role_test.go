@@ -485,8 +485,7 @@ func TestRoleCreate(t *testing.T) {
 		t.Parallel()
 
 		d, _ := expectedRoleData(randomRoleName())
-		req := logical.Request{Path: rolesStoragePath, Storage: s}
-		err := saveRole(context.Background(), d, req.Storage)
+		err := saveRole(context.Background(), d, s)
 		require.Error(t, err)
 	})
 }

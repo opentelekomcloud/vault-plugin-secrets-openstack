@@ -14,6 +14,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testCase struct {
+	Cloud      string
+	ProjectID  string
+	DomainID   string
+	Root       bool
+	SecretType string
+	UserRoles  []string
+	Extensions map[string]interface{}
+}
+
 func (p *PluginTest) TestCredsLifecycle() {
 	t := p.T()
 
@@ -21,16 +31,6 @@ func (p *PluginTest) TestCredsLifecycle() {
 	require.NotEmpty(t, cloud)
 
 	_, aux := openstackClient(t)
-
-	type testCase struct {
-		Cloud      string
-		ProjectID  string
-		DomainID   string
-		Root       bool
-		SecretType string
-		UserRoles  []string
-		Extensions map[string]interface{}
-	}
 
 	cases := map[string]testCase{
 		"root_token": {
@@ -88,7 +88,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			resp, err = p.vaultDo(
 				http.MethodPost,
 				roleURL(roleName),
-				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles, data.Extensions),
+				cloudToRoleMap(data),
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
@@ -152,14 +152,14 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 	}
 }
 
-func cloudToRoleMap(root bool, cloud, projectID, domainID, secretType string, userRoles []string, extensions map[string]interface{}) map[string]interface{} {
+func cloudToRoleMap(data testCase) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
-		"cloud":       cloud,
-		"project_id":  projectID,
-		"domain_id":   domainID,
-		"root":        root,
-		"secret_type": secretType,
-		"user_roles":  userRoles,
-		"extensions":  extensions,
+		"cloud":       data.Cloud,
+		"project_id":  data.ProjectID,
+		"domain_id":   data.DomainID,
+		"root":        data.Root,
+		"secret_type": data.SecretType,
+		"user_roles":  data.UserRoles,
+		"extensions":  data.Extensions,
 	})
 }

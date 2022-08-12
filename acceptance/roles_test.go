@@ -54,6 +54,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 
 	data := expectedRoleData(cloud.Name)
 	roleName := "test-write"
+
 	t.Run("WriteRole", func(t *testing.T) {
 		resp, err := p.vaultDo(
 			http.MethodPost,
@@ -63,6 +64,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 	})
+
 	t.Run("ReadRole", func(t *testing.T) {
 		resp, err := p.vaultDo(
 			http.MethodGet,

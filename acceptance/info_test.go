@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,6 +38,6 @@ func (p *PluginTest) TestInfo() {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	//data := extractInfoData(t, resp)
-	//assert.NotEmpty(t, data)
+	data := extractInfoData(t, resp)
+	assert.NotEmpty(t, data)
 }
