@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,16 +29,17 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 		DomainID   string
 		Root       bool
 		SecretType string
-		UserRoles  []string
 		Extensions map[string]interface{}
+		Username   string
 	}
 
 	cases := map[string]testCase{
 		"user_password": {
+			Root:       false,
 			Cloud:      cloud.Name,
 			ProjectID:  aux.ProjectID,
 			DomainID:   aux.DomainID,
-			Root:       false,
+			Username:   "static-test",
 			SecretType: "password",
 		},
 	}
@@ -68,7 +70,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			resp, err = p.vaultDo(
 				http.MethodPost,
 				staticRoleURL(roleName),
-				cloudToRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.SecretType, data.UserRoles, data.Extensions),
+				cloudToStaticRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.Username, data.SecretType, data.Extensions),
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
@@ -122,4 +124,16 @@ func staticCredsURL(roleName string) string {
 
 func staticRoleURL(name string) string {
 	return fmt.Sprintf("/v1/openstack/static-role/%s", name)
+}
+
+func cloudToStaticRoleMap(root bool, cloud, projectID, domainID, username string, secretType string, extensions map[string]interface{}) map[string]interface{} {
+	return fixtures.SanitizedMap(map[string]interface{}{
+		"cloud":       cloud,
+		"project_id":  projectID,
+		"domain_id":   domainID,
+		"root":        root,
+		"secret_type": secretType,
+		"extensions":  extensions,
+		"username":    username,
+	})
 }
