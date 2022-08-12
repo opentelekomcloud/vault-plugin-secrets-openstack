@@ -444,7 +444,7 @@ created. If the role exists, it will be updated with the new attributes.
   If set to `true`, `secret_type` can't be set to `password`.
   If set to `true`, `ttl` value is ignored.
 
-- `ttl` `(string: "1h")` - Specifies password rotation time value for the static user as a
+- `rotation_duration` `(string: "1h")` - Specifies password rotation time value for the static user as a
   string duration with time suffix.
 
 - `secret_type` `(string: "token")` - Specifies what kind of secret will configuration contain.

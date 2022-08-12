@@ -75,7 +75,7 @@ func (p *PluginTest) TestStaticRoleLifecycle() {
 		expected := &staticRoleData{
 			Cloud:            data["cloud"].(string),
 			TTL:              data["ttl"].(time.Duration),
-			RotationDuration: data["ttl"].(time.Duration),
+			RotationDuration: data["rotation_duration"].(time.Duration),
 			ProjectID:        data["project_id"].(string),
 			ProjectName:      data["project_name"].(string),
 			Extensions:       data["extensions"].(map[string]interface{}),

@@ -30,10 +30,10 @@ func TestStaticRoleStoragePath(t *testing.T) {
 func expectedStaticRoleData(cloudName string) (*roleStaticEntry, map[string]interface{}) {
 	expTTL := time.Hour
 	expected := &roleStaticEntry{
-		Cloud:       cloudName,
-		TTL:         expTTL / time.Second,
-		ProjectName: tools.RandomString("p", 5),
-		DomainName:  tools.RandomString("d", 5),
+		Cloud:            cloudName,
+		RotationDuration: expTTL / time.Second,
+		ProjectName:      tools.RandomString("p", 5),
+		DomainName:       tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
 		"cloud":             expected.Cloud,
@@ -338,13 +338,14 @@ func TestStaticRoleCreate(t *testing.T) {
 				SecretType:  SecretPassword,
 				Username:    username,
 			},
-			"ttl": {
-				Name:        randomRoleName(),
-				Cloud:       cloudName,
-				ProjectName: randomRoleName(),
-				SecretType:  SecretToken,
-				Username:    username,
-				TTL:         24 * time.Hour,
+			"rotation_duration": {
+				Name:             randomRoleName(),
+				Cloud:            cloudName,
+				ProjectName:      randomRoleName(),
+				SecretType:       SecretToken,
+				Username:         username,
+				RotationDuration: 24 * time.Hour,
+				TTL:              24 * time.Hour,
 			},
 			"endpoint-override": {
 				Name:      randomRoleName(),
@@ -400,10 +401,10 @@ func TestStaticRoleCreate(t *testing.T) {
 		cases := map[string]*errRoleEntry{
 			"root-ttl": {
 				roleStaticEntry: &roleStaticEntry{
-					Cloud:    cloudName,
-					Username: username,
-					Root:     true,
-					TTL:      1 * time.Hour,
+					Cloud:            cloudName,
+					Username:         username,
+					Root:             true,
+					RotationDuration: 1 * time.Hour,
 				},
 				errorRegex: notForRootRe,
 			},
@@ -525,12 +526,11 @@ func fillStaticRoleDefaultFields(b *backend, entry *roleStaticEntry) {
 		entry.SecretType = flds["secret_type"].Default.(secretType)
 	}
 	if !entry.Root {
-		if entry.TTL == 0 {
+		if entry.RotationDuration == 0 {
+			entry.RotationDuration = time.Hour
 			entry.TTL = time.Hour
 		}
 	}
-	if entry.RotationDuration == 0 {
-		entry.RotationDuration = time.Hour / time.Second
-	}
 	entry.TTL /= time.Second
+	entry.RotationDuration /= time.Second
 }

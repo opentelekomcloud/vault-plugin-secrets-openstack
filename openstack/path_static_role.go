@@ -54,20 +54,20 @@ func (b *backend) pathStaticRole() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Specifies the name of the role to create. This is part of the request URL.",
+				Description: "Specifies the name of the static role to create. This is part of the request URL.",
 			},
 			"cloud": {
 				Type:        framework.TypeString,
-				Description: "Specifies root configuration of the created role.",
+				Description: "Specifies root configuration of the created static role.",
 			},
 			"root": {
 				Type:        framework.TypeBool,
-				Description: "Specifies whenever to use the root user as a role actor.",
+				Description: "Specifies whenever to use the root static user as a role actor.",
 				Default:     false,
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: "Specifies TTL value for the dynamically created users as a string duration with time suffix.",
+				Description: "Specifies password rotation time left until next password rotation..",
 				Default:     "1h",
 			},
 			"rotation_duration": {
@@ -189,7 +189,7 @@ func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 	return map[string]interface{}{
 		"cloud":             src.Cloud,
 		"root":              src.Root,
-		"ttl":               src.TTL,
+		"ttl":               src.RotationDuration,
 		"rotation_duration": src.RotationDuration,
 		"secret_type":       string(src.SecretType),
 		"username":          src.Username,
@@ -226,6 +226,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 			return logical.ErrorResponse("cloud is required when creating a static role"), nil
 		}
 	}
+
 	if username, ok := d.GetOk("username"); ok {
 		userName = username.(string)
 	} else {
@@ -233,6 +234,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 			return logical.ErrorResponse("username is required when creating a static role"), nil
 		}
 	}
+
 	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -264,21 +266,17 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if !entry.Root {
-		if ttl, ok := d.GetOk("ttl"); ok {
-			entry.TTL = time.Duration(ttl.(int))
+		if rotation, ok := d.GetOk("rotation_duration"); ok {
+			entry.RotationDuration = time.Duration(rotation.(int))
+			entry.TTL = time.Duration(rotation.(int))
 		} else if req.Operation == logical.CreateOperation {
+			entry.RotationDuration = time.Hour / time.Second
 			entry.TTL = time.Hour / time.Second
 		}
 	} else {
-		if _, ok := d.GetOk("ttl"); ok {
-			return logical.ErrorResponse(errInvalidForRoot, "ttl"), nil
+		if _, ok := d.GetOk("rotation_duration"); ok {
+			return logical.ErrorResponse(errInvalidForRoot, "rotation_duration"), nil
 		}
-	}
-
-	if rotation, ok := d.GetOk("rotation_duration"); ok {
-		entry.RotationDuration = time.Duration(rotation.(int))
-	} else if req.Operation == logical.CreateOperation {
-		entry.RotationDuration = time.Hour / time.Second
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
@@ -327,32 +325,6 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 	if entry == nil {
 		return &logical.Response{}, nil
 	}
-
-	//role, err := getStaticRoleByName(ctx, name, req)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//sharedCloud := b.getSharedCloud(role.Cloud)
-	//client, err := sharedCloud.getClient(ctx, req.Storage)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//user, err := getUserInfoByName(ctx, name, req)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//delUser := deleteUser(client, user.User.ID)
-	//if delUser != nil {
-	//	return nil, err
-	//}
-	//
-	//err = req.Storage.Delete(ctx, staticCredsStoragePath(name))
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	err = req.Storage.Delete(ctx, roleStaticStoragePath(name))
 	return nil, err
