@@ -2,7 +2,6 @@ package openstack
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,32 +10,24 @@ import (
 )
 
 const (
-	rolesStoragePath = "roles"
-	pathRoles        = `roles/?`
+	staticRolesStoragePath = "static-roles"
 
-	errInvalidForRoot = "impossible to set %s for the root user"
+	staticRoleHelpSyn = "Manages the Vault role for generating static Openstack users."
 
-	rolesListHelpSyn  = `List existing roles.`
-	rolesListHelpDesc = `
-List existing roles by name. Supports filtering by cloud.
-`
-	roleHelpSyn  = "Manage the Vault roles used to generate OpenStack credentials."
-	roleHelpDesc = `
-This path allows you to read and write roles that are used to generate OpenStack login
+	staticRoleHelpDesc = `
+This path allows you to read and write static roles that are used to store OpenStack login
 credentials. These roles are associated with either an existing user, or a list of user groups,
 which are used to control permissions to OpenStack resources.
 `
 )
 
 var (
-	pathRole = fmt.Sprintf("role/%s", framework.GenericNameRegex("name"))
-
-	errRoleGet = errors.New("error searching for the role")
+	staticPathRole = fmt.Sprintf("static-role/%s", framework.GenericNameRegex("name"))
 )
 
-func (b *backend) pathRoles() *framework.Path {
+func (b *backend) pathStaticRoles() *framework.Path {
 	return &framework.Path{
-		Pattern: pathRoles,
+		Pattern: fmt.Sprintf("%s/?$", staticRolesStoragePath),
 		Fields: map[string]*framework.FieldSchema{
 			"cloud": {
 				Type:        framework.TypeNameString,
@@ -46,10 +37,10 @@ func (b *backend) pathRoles() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathRolesList,
+				Callback: b.pathStaticRolesList,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathRolesList,
+				Callback: b.pathStaticRolesList,
 			},
 		},
 		HelpSynopsis:    rolesListHelpSyn,
@@ -57,9 +48,9 @@ func (b *backend) pathRoles() *framework.Path {
 	}
 }
 
-func (b *backend) pathRole() *framework.Path {
+func (b *backend) pathStaticRole() *framework.Path {
 	return &framework.Path{
-		Pattern: pathRole,
+		Pattern: staticPathRole,
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -74,10 +65,14 @@ func (b *backend) pathRole() *framework.Path {
 				Description: "Specifies whenever to use the root user as a role actor.",
 				Default:     false,
 			},
-
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Specifies TTL value for the dynamically created users as a string duration with time suffix.",
+				Default:     "1h",
+			},
+			"rotation_duration": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Specifies the duration of static role password rotation.",
 				Default:     "1h",
 			},
 			"secret_type": {
@@ -86,13 +81,9 @@ func (b *backend) pathRole() *framework.Path {
 				AllowedValues: []interface{}{"token", "password"},
 				Default:       SecretToken,
 			},
-			"user_groups": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: "Specifies list of existing OpenStack groups this Vault role is allowed to assume.",
-			},
-			"user_roles": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: "Specifies list of existing OpenStack roles this Vault role is allowed to assume.",
+			"username": {
+				Type:        framework.TypeNameString,
+				Description: "Specifies a domain name for domain-scoped role.",
 			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
@@ -118,47 +109,39 @@ func (b *backend) pathRole() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathRoleRead,
+				Callback: b.pathStaticRoleRead,
 			},
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathRoleUpdate,
+				Callback: b.pathStaticRoleUpdate,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathRoleUpdate,
+				Callback: b.pathStaticRoleUpdate,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.pathRoleDelete,
+				Callback: b.pathStaticRoleDelete,
 			},
 		},
-		ExistenceCheck:  b.roleExistenceCheck,
-		HelpSynopsis:    roleHelpSyn,
-		HelpDescription: roleHelpDesc,
+		ExistenceCheck:  b.staticRoleExistenceCheck,
+		HelpSynopsis:    staticRoleHelpSyn,
+		HelpDescription: staticRoleHelpDesc,
 	}
 }
 
-func (b *backend) roleExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
-	role, err := getRole(ctx, d, r.Storage)
+func (b *backend) staticRoleExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
+	role, err := getStaticRole(ctx, d, r)
 	if err != nil {
 		return false, err
 	}
 	return role != nil, nil
 }
 
-type secretType string
-
-const (
-	SecretPassword secretType = "password"
-	SecretToken    secretType = "token"
-)
-
-type roleEntry struct {
+type roleStaticEntry struct {
 	Name        string            `json:"name"`
 	Cloud       string            `json:"cloud"`
 	Root        bool              `json:"root"`
 	TTL         time.Duration     `json:"ttl,omitempty"`
 	SecretType  secretType        `json:"secret_type"`
-	UserGroups  []string          `json:"user_groups"`
-	UserRoles   []string          `json:"user_roles"`
+	Username    string            `json:"username"`
 	ProjectID   string            `json:"project_id"`
 	ProjectName string            `json:"project_name"`
 	DomainID    string            `json:"domain_id"`
@@ -166,25 +149,26 @@ type roleEntry struct {
 	Extensions  map[string]string `json:"extensions"`
 }
 
-func roleStoragePath(name string) string {
-	return fmt.Sprintf("%s/%s", rolesStoragePath, name)
+func roleStaticStoragePath(name string) string {
+	return fmt.Sprintf("%s/%s", "static-roles", name)
 }
 
-func getRole(ctx context.Context, d *framework.FieldData, s logical.Storage) (*roleEntry, error) {
+func getStaticRole(ctx context.Context, d *framework.FieldData, s *logical.Request) (*roleStaticEntry, error) {
 	name := d.Get("name").(string)
-	return getRoleByName(ctx, name, s)
+	return getStaticRoleByName(ctx, name, s)
 }
 
-func saveRole(ctx context.Context, e *roleEntry, s logical.Storage) error {
-	storageEntry, err := logical.StorageEntryJSON(roleStoragePath(e.Name), e)
+func saveStaticRole(ctx context.Context, e *roleStaticEntry, s *logical.Request) error {
+	storageEntry, err := logical.StorageEntryJSON(roleStaticStoragePath(e.Name), e)
 	if err != nil {
 		return err
 	}
-	return s.Put(ctx, storageEntry)
+
+	return s.Storage.Put(ctx, storageEntry)
 }
 
-func getRoleByName(ctx context.Context, name string, s logical.Storage) (*roleEntry, error) {
-	entry, err := s.Get(ctx, roleStoragePath(name))
+func getStaticRoleByName(ctx context.Context, name string, s *logical.Request) (*roleStaticEntry, error) {
+	entry, err := s.Storage.Get(ctx, roleStaticStoragePath(name))
 	if err != nil {
 		return nil, err
 	}
@@ -193,21 +177,20 @@ func getRoleByName(ctx context.Context, name string, s logical.Storage) (*roleEn
 		return nil, nil
 	}
 
-	role := new(roleEntry)
+	role := new(roleStaticEntry)
 	if err := entry.DecodeJSON(role); err != nil {
 		return nil, err
 	}
 	return role, nil
 }
 
-func roleToMap(src *roleEntry) map[string]interface{} {
+func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 	return map[string]interface{}{
 		"cloud":        src.Cloud,
 		"root":         src.Root,
 		"ttl":          src.TTL,
 		"secret_type":  string(src.SecretType),
-		"user_groups":  src.UserGroups,
-		"user_roles":   src.UserRoles,
+		"username":     src.Username,
 		"project_id":   src.ProjectID,
 		"project_name": src.ProjectName,
 		"domain_id":    src.DomainID,
@@ -216,8 +199,8 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 	}
 }
 
-func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := getRole(ctx, d, req.Storage)
+func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entry, err := getStaticRole(ctx, d, req)
 	if err != nil {
 		return nil, errRoleGet
 	}
@@ -225,19 +208,27 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("role not found"), nil
 	}
 
-	data := roleToMap(entry)
+	data := staticRoleToMap(entry)
 	return &logical.Response{
 		Data: data,
 	}, nil
 }
 
-func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var cloudName string
+	var userName string
 	if cloud, ok := d.GetOk("cloud"); ok {
 		cloudName = cloud.(string)
 	} else {
 		if req.Operation == logical.CreateOperation {
 			return logical.ErrorResponse("cloud is required when creating a role"), nil
+		}
+	}
+	if username, ok := d.GetOk("username"); ok {
+		userName = username.(string)
+	} else {
+		if req.Operation == logical.CreateOperation {
+			return logical.ErrorResponse("username is required when creating a role"), nil
 		}
 	}
 	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
@@ -249,8 +240,11 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("name is required"), nil
+	}
 
-	entry, err := getRoleByName(ctx, name, req.Storage)
+	entry, err := getStaticRoleByName(ctx, name, req)
 	if err != nil {
 		return nil, err
 	}
@@ -258,8 +252,10 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		if req.Operation == logical.UpdateOperation {
 			return logical.ErrorResponse("role `%s` not found during update operation", name), nil
 		}
-		entry = &roleEntry{Name: name, Cloud: cloudName}
+		entry = &roleStaticEntry{Name: name, Cloud: cloudName}
 	}
+
+	entry.Username = userName
 
 	if isRoot, ok := d.GetOk("root"); ok {
 		entry.Root = isRoot.(bool)
@@ -306,30 +302,16 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.Extensions = ext.(map[string]string)
 	}
 
-	if groups, ok := d.GetOk("user_groups"); ok {
-		if entry.Root {
-			return logical.ErrorResponse(errInvalidForRoot, "user groups"), nil
-		}
-		entry.UserGroups = groups.([]string)
-	}
-
-	if roles, ok := d.GetOk("user_roles"); ok {
-		if entry.Root {
-			return logical.ErrorResponse(errInvalidForRoot, "user roles"), nil
-		}
-		entry.UserRoles = roles.([]string)
-	}
-
-	if err := saveRole(ctx, entry, req.Storage); err != nil {
+	if err := saveStaticRole(ctx, entry, req); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	entry, err := req.Storage.Get(ctx, roleStoragePath(name))
+	entry, err := req.Storage.Get(ctx, roleStaticStoragePath(name))
 	if err != nil {
 		return nil, err
 	}
@@ -338,12 +320,38 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 		return &logical.Response{}, nil
 	}
 
-	err = req.Storage.Delete(ctx, roleStoragePath(name))
+	role, err := getStaticRoleByName(ctx, name, req)
+	if err != nil {
+		return nil, err
+	}
+
+	sharedCloud := b.getSharedCloud(role.Cloud)
+	client, err := sharedCloud.getClient(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := getUserInfoByName(ctx, name, req)
+	if err != nil {
+		return nil, err
+	}
+
+	delUser := deleteUser(client, user.User.ID)
+	if delUser != nil {
+		return nil, err
+	}
+
+	err = req.Storage.Delete(ctx, staticCredsStoragePath(name))
+	if err != nil {
+		return nil, err
+	}
+
+	err = req.Storage.Delete(ctx, roleStaticStoragePath(name))
 	return nil, err
 }
 
-func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List(ctx, rolesStoragePath+"/")
+func (b *backend) pathStaticRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roles, err := req.Storage.List(ctx, fmt.Sprintf("%s/", staticRolesStoragePath))
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +360,7 @@ func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *fr
 	if cloud, ok := d.GetOk("cloud"); ok {
 		var refinedRoles []string
 		for _, name := range roles {
-			role, err := getRoleByName(ctx, name, req.Storage)
+			role, err := getStaticRoleByName(ctx, name, req)
 			if err != nil {
 				return nil, err
 			}

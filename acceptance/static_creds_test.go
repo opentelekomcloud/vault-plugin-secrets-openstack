@@ -36,6 +36,8 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 		"user_password": {
 			Cloud:      cloud.Name,
 			ProjectID:  aux.ProjectID,
+			DomainID:   aux.DomainID,
+			Root:       false,
 			SecretType: "password",
 		},
 	}

@@ -225,7 +225,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
-	role, err := getRoleByName(ctx, roleName, r)
+	role, err := getRoleByName(ctx, roleName, r.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -380,14 +380,6 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 	}
 
 	return newUser, nil
-}
-
-func deleteUser(client *gophercloud.ServiceClient, userId string) error {
-	deleteUser := users.Delete(client, userId)
-	if deleteUser.Err != nil {
-		return deleteUser.Err
-	}
-	return nil
 }
 
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
