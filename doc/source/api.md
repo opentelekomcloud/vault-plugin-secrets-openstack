@@ -154,10 +154,6 @@ created. If the role exists, it will be updated with the new attributes.
   If set to `true`, `user_groups` value is ignored.
   if set to `true`, `user_roles` value is ignored.
   If set to `true`, `ttl` value is ignored.
-  If set to `true`, `username` value is ignored.
-
-- `username` `(string: <optional>)` - Specifies the `username` for the static user. If `username` is
-  specified then `username_template` in `cloud` path will not work.
 
 - `ttl` `(string: "1h")` - Specifies TTL value for the dynamically created users as a
   string duration with time suffix.
@@ -240,21 +236,6 @@ $ curl \
 }
 ```
 
-#### Creating a static role with password-based access
-
-```json
-{
-  "cloud": "example-cloud",
-  "project_name": "test",
-  "username": "vault-dns",
-  "secret_type": "password",
-  "user_groups": [
-    "default",
-    "testing"
-  ]
-}
-```
-
 #### Creating a role with endpoint override
 
 ```json
@@ -316,7 +297,6 @@ $ curl \
   "cloud": "example-cloud",
   "root": false,
   "secret_type": "password",
-  "username": "",
   "project_name": "test",
   "domain_name": "test",
   "user_groups": [
@@ -438,6 +418,170 @@ $ curl \
       "user_domain_id": "Default"
     },
     "auth_type": "password"
+  }
+}
+```
+
+## Create/Update Static Role
+
+This endpoint creates or updates the static role with the given `name`. If a role with the name does not exist, it will be
+created. If the role exists, it will be updated with the new attributes.
+
+| Method | Path                           |
+|:-------|:-------------------------------|
+| `POST` | `/openstack/static-role/:name` |
+| `PUT`  | `/openstack/static-role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to create. This is part of the request URL.
+
+- `cloud` `(string: <required>)` - Specifies root configuration of the created role.
+
+- `username` `(string: <required>)` - Specifies username of user managed by the static role.
+
+- `root` `(bool: <optional>)` - Specifies whenever to use the root user as a role actor.
+  If set to `true`, `secret_type` can't be set to `password`.
+  If set to `true`, `ttl` value is ignored.
+
+- `rotation_duration` `(string: "1h")` - Specifies password rotation time value for the static user as a
+  string duration with time suffix.
+
+- `secret_type` `(string: "token")` - Specifies what kind of secret will configuration contain.
+  Valid choices are `token` and `password`.
+
+- `project_id` `(string: <optional>)` - Create a project-scoped role with given project ID. Mutually exclusive with
+  `project_name`.
+
+- `project_name` `(string: <optional>)` - Create a project-scoped role with given project name. Mutually exclusive with
+  `project_id`.
+
+- `domain_id` `(string: <optional>)` - Create a domain-scoped role with given domain ID. Mutually exclusive with
+  `domain_name`.
+
+- `domain_name` `(string: <optional>)` - Create a domain-scoped role with given domain name. Mutually exclusive with
+  `domain_id`.
+
+When none of `project_name` or `project_id` is set, created role will have a project scope.
+
+- `extensions` `(list: [])` - A list of strings representing a key/value pair to be used as extensions to the cloud
+  configuration (e.g. `volume_api_version` or endpoint overrides). Format is a key and value
+  separated by an `=` (e.g. `test_key=value`). Note: when using the CLI multiple tags
+  can be specified in the role configuration by adding another `extensions` assignment
+  in the same command.
+
+### Sample Request
+
+```shell
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/openstack/static-role/example-role
+```
+
+### Sample Payload
+
+#### Creating a static role with project scope
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "username": "test-user"
+}
+```
+
+#### Creating a static role using root user
+
+```json
+{
+  "cloud": "example-cloud",
+  "root": true,
+  "project_name": "test",
+  "username": "test-user"
+}
+```
+
+#### Creating a static role for password-based access
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "secret_type": "password",
+  "username": "test-user"
+}
+```
+
+#### Creating a static role with endpoint override
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "username": "test-user",
+  "extensions": [
+    "volume_api_version=3",
+    "object_store_endpoint_override=https://swift.example.com"
+  ]
+}
+```
+
+or
+
+```json
+{
+  "cloud": "example-cloud",
+  "project_name": "test",
+  "username": "test-user",
+  "extensions": {
+    "volume_api_version": 3,
+    "object_store_endpoint_override": "https://swift.example.com"
+  }
+}
+```
+
+## List Static Roles
+
+This endpoint queries an existing static role by the given name. If the role does not exist, a 404 is returned.
+
+| Method | Path                      |
+|:-------|:--------------------------|
+| `LIST` | `/openstack/static-roles` |
+| `GET`  | `/openstack/static-roles` |
+
+### Parameters
+
+- `cloud` `(string: <optional>)` – Specifies the name of the role to read. This is part of the request URL.
+
+### Sample Request
+
+```shell
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST
+    --data @payload.json
+    http://127.0.0.1:8200/v1/openstack/static-roles
+```
+
+### Sample Payload
+
+```json
+{
+  "cloud": "default-cloud"
+}
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": [
+      "default-cloud-role-1",
+      "default-cloud-role-2"
+    ]
   }
 }
 ```

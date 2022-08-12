@@ -16,52 +16,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func rolePath(name string) string {
-	return fmt.Sprintf("%s/%s", "role", name)
+func staticRolePath(name string) string {
+	return fmt.Sprintf("%s/%s", "static-role", name)
 }
 
-func TestRoleStoragePath(t *testing.T) {
-	name := tools.RandomString("role", 5)
-	expected := "roles/" + name
-	actual := roleStoragePath(name)
+func TestStaticRoleStoragePath(t *testing.T) {
+	name := tools.RandomString("static-role", 5)
+	expected := "static-roles/" + name
+	actual := roleStaticStoragePath(name)
 	assert.Equal(t, actual, expected)
 }
 
-func randomRoleName() string {
-	return tools.RandomString("k", 5) + "m"
-}
-
-func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
+func expectedStaticRoleData(cloudName string) (*roleStaticEntry, map[string]interface{}) {
 	expTTL := time.Hour
-	expected := &roleEntry{
-		Cloud:       cloudName,
-		TTL:         expTTL / time.Second,
-		ProjectName: tools.RandomString("p", 5),
-		DomainName:  tools.RandomString("d", 5),
+	expected := &roleStaticEntry{
+		Cloud:            cloudName,
+		RotationDuration: expTTL / time.Second,
+		ProjectName:      tools.RandomString("p", 5),
+		DomainName:       tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
-		"cloud":        expected.Cloud,
-		"ttl":          expTTL,
-		"project_id":   "",
-		"project_name": expected.ProjectName,
-		"domain_id":    "",
-		"domain_name":  expected.DomainName,
-		"extensions":   map[string]string{},
-		"root":         false,
-		"secret_type":  "token",
-		"user_groups":  []string{},
-		"user_roles":   []string{},
+		"cloud":             expected.Cloud,
+		"ttl":               expTTL,
+		"project_id":        "",
+		"project_name":      expected.ProjectName,
+		"domain_id":         "",
+		"domain_name":       expected.DomainName,
+		"extensions":        map[string]string{},
+		"root":              false,
+		"rotation_duration": expTTL,
+		"secret_type":       "token",
+		"username":          "static-test",
 	}
 	return expected, expectedMap
 }
 
-func saveRawRole(t *testing.T, name string, raw map[string]interface{}, s logical.Storage) {
-	storeEntry, err := logical.StorageEntryJSON(roleStoragePath(name), raw)
+func saveRawStaticRole(t *testing.T, name string, raw map[string]interface{}, s logical.Storage) {
+	storeEntry, err := logical.StorageEntryJSON(roleStaticStoragePath(name), raw)
 	require.NoError(t, err)
 	require.NoError(t, s.Put(context.Background(), storeEntry))
 }
 
-func TestRoleGet(t *testing.T) {
+func TestStaticRoleGet(t *testing.T) {
 	t.Parallel()
 
 	t.Run("existing", func(t *testing.T) {
@@ -69,13 +65,13 @@ func TestRoleGet(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData(randomRoleName())
+		_, expectedMap := expectedStaticRoleData(randomRoleName())
 
-		saveRawRole(t, roleName, expectedMap, s)
+		saveRawStaticRole(t, roleName, expectedMap, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
-			Path:      rolePath(roleName),
+			Path:      staticRolePath(roleName),
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -112,7 +108,7 @@ func TestRoleGet(t *testing.T) {
 	})
 }
 
-func TestRoleExistence(t *testing.T) {
+func TestStaticRoleExistence(t *testing.T) {
 	t.Parallel()
 
 	t.Run("existing", func(t *testing.T) {
@@ -120,15 +116,15 @@ func TestRoleExistence(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, exp := expectedRoleData(randomRoleName())
-		saveRawRole(t, roleName, exp, s)
+		_, exp := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, roleName, exp, s)
 
 		req := &logical.Request{Storage: s}
 		fData := &framework.FieldData{
 			Schema: b.pathRole().Fields,
 			Raw:    map[string]interface{}{"name": roleName},
 		}
-		ok, err := b.roleExistenceCheck(context.Background(), req, fData)
+		ok, err := b.staticRoleExistenceCheck(context.Background(), req, fData)
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
@@ -165,7 +161,7 @@ func TestRoleExistence(t *testing.T) {
 	})
 }
 
-func TestRoleList(t *testing.T) {
+func TestStaticRoleList(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ok", func(t *testing.T) {
@@ -176,13 +172,13 @@ func TestRoleList(t *testing.T) {
 		for i := 0; i < roleCount; i++ {
 			name := randomRoleName()
 			roleNames[i] = name
-			_, exp := expectedRoleData(randomRoleName())
-			saveRawRole(t, name, exp, s)
+			_, exp := expectedStaticRoleData(randomRoleName())
+			saveRawStaticRole(t, name, exp, s)
 		}
 
 		lst, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ListOperation,
-			Path:      "roles/",
+			Path:      "static-roles/",
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -208,15 +204,15 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData(randomRoleName())
-		saveRawRole(t, name1, expMap1, s)
+		expRole1, expMap1 := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, name1, expMap1, s)
 		name2 := randomRoleName()
-		_, expMap2 := expectedRoleData(randomRoleName())
-		saveRawRole(t, name2, expMap2, s)
+		_, expMap2 := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, name2, expMap2, s)
 
 		lst, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ListOperation,
-			Path:      "roles/",
+			Path:      "static-roles/",
 			Data: map[string]interface{}{
 				"cloud": expRole1.Cloud,
 			},
@@ -231,12 +227,12 @@ func TestRoleList(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t, failVerbRead)
 		name1 := randomRoleName()
-		expRole1, expMap1 := expectedRoleData(randomRoleName())
-		saveRawRole(t, name1, expMap1, s)
+		expRole1, expMap1 := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, name1, expMap1, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ListOperation,
-			Path:      "roles/",
+			Path:      "static-roles/",
 			Data: map[string]interface{}{
 				"cloud": expRole1.Cloud,
 			},
@@ -246,7 +242,7 @@ func TestRoleList(t *testing.T) {
 	})
 }
 
-func TestRoleDelete(t *testing.T) {
+func TestStaticRoleDelete(t *testing.T) {
 	t.Parallel()
 
 	t.Run("existing", func(t *testing.T) {
@@ -254,8 +250,8 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData(randomRoleName())
-		saveRawRole(t, roleName, expectedMap, s)
+		_, expectedMap := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, roleName, expectedMap, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.DeleteOperation,
@@ -272,7 +268,7 @@ func TestRoleDelete(t *testing.T) {
 		roleName := randomRoleName()
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.DeleteOperation,
-			Path:      rolePath(roleName),
+			Path:      staticRolePath(roleName),
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -284,12 +280,12 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbDelete)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData(randomRoleName())
-		saveRawRole(t, roleName, expectedMap, s)
+		_, expectedMap := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.DeleteOperation,
-			Path:      rolePath(roleName),
+			Path:      staticRolePath(roleName),
 			Storage:   s,
 		})
 		require.Error(t, err)
@@ -300,8 +296,8 @@ func TestRoleDelete(t *testing.T) {
 		b, s := testBackend(t, failVerbRead)
 
 		roleName := randomRoleName()
-		_, expectedMap := expectedRoleData(randomRoleName())
-		saveRawRole(t, roleName, expectedMap, s)
+		_, expectedMap := expectedStaticRoleData(randomRoleName())
+		saveRawStaticRole(t, roleName, expectedMap, s)
 
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.DeleteOperation,
@@ -312,46 +308,49 @@ func TestRoleDelete(t *testing.T) {
 	})
 }
 
-func TestRoleCreate(t *testing.T) {
+func TestStaticRoleCreate(t *testing.T) {
 	t.Parallel()
-
+	username := tools.RandomString("user", 5)
 	id, _ := uuid.GenerateUUID()
 	t.Run("ok", func(t *testing.T) {
 
 		b, s := testBackend(t)
 		cloudName := preCreateCloud(t, s)
 
-		cases := map[string]*roleEntry{
+		cases := map[string]*roleStaticEntry{
 			"admin": {
-				Name:  randomRoleName(),
-				Cloud: cloudName,
-				Root:  true,
+				Name:     randomRoleName(),
+				Cloud:    cloudName,
+				Root:     true,
+				Username: username,
 			},
 			"token": {
 				Name:        randomRoleName(),
 				Cloud:       cloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
-				UserGroups:  []string{"default", "testing"},
+				Username:    username,
 			},
 			"password": {
 				Name:        randomRoleName(),
 				Cloud:       cloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
-				UserGroups:  []string{"default", "testing"},
+				Username:    username,
 			},
-			"ttl": {
-				Name:        randomRoleName(),
-				Cloud:       cloudName,
-				ProjectName: randomRoleName(),
-				SecretType:  SecretToken,
-				UserGroups:  []string{"default", "testing"},
-				TTL:         24 * time.Hour,
+			"rotation_duration": {
+				Name:             randomRoleName(),
+				Cloud:            cloudName,
+				ProjectName:      randomRoleName(),
+				SecretType:       SecretToken,
+				Username:         username,
+				RotationDuration: 24 * time.Hour,
+				TTL:              24 * time.Hour,
 			},
 			"endpoint-override": {
 				Name:      randomRoleName(),
 				Cloud:     cloudName,
+				Username:  username,
 				ProjectID: id,
 				Extensions: map[string]string{
 					"volume_api_version":             "3",
@@ -366,24 +365,24 @@ func TestRoleCreate(t *testing.T) {
 				t.Parallel()
 
 				roleName := data.Name
-				inputRole := fixtures.SanitizedMap(roleToMap(data))
+				inputRole := fixtures.SanitizedMap(staticRoleToMap(data))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.CreateOperation,
-					Path:      rolePath(roleName),
+					Path:      staticRolePath(roleName),
 					Data:      inputRole,
 					Storage:   s,
 				})
 				require.NoError(t, err)
 				require.Empty(t, resp)
 
-				entry, err := s.Get(context.Background(), roleStoragePath(roleName))
+				entry, err := s.Get(context.Background(), roleStaticStoragePath(roleName))
 				require.NoError(t, err)
 				require.NotEmpty(t, entry)
-				role := new(roleEntry)
+				role := new(roleStaticEntry)
 				assert.NoError(t, entry.DecodeJSON(role))
 
-				fillRoleDefaultFields(b, data) // otherwise there will be false positives
+				fillStaticRoleDefaultFields(b, data) // otherwise there will be false positives
 				assert.Equal(t, data, role)
 			})
 		}
@@ -391,7 +390,7 @@ func TestRoleCreate(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		type errRoleEntry struct {
-			*roleEntry
+			*roleStaticEntry
 			errorRegex *regexp.Regexp
 		}
 
@@ -401,40 +400,26 @@ func TestRoleCreate(t *testing.T) {
 		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
 			"root-ttl": {
-				roleEntry: &roleEntry{
-					Cloud: cloudName,
-					Root:  true,
-					TTL:   1 * time.Hour,
+				roleStaticEntry: &roleStaticEntry{
+					Cloud:            cloudName,
+					Username:         username,
+					Root:             true,
+					RotationDuration: 1 * time.Hour,
 				},
 				errorRegex: notForRootRe,
 			},
 			"root-password": {
-				roleEntry: &roleEntry{
+				roleStaticEntry: &roleStaticEntry{
 					Cloud:      cloudName,
+					Username:   username,
 					Root:       true,
 					SecretType: SecretPassword,
 				},
 				errorRegex: notForRootRe,
 			},
-			"root-user-groups": {
-				roleEntry: &roleEntry{
-					Cloud:      cloudName,
-					Root:       true,
-					UserGroups: []string{"ug-1"},
-				},
-				errorRegex: notForRootRe,
-			},
-			"root-user-roles": {
-				roleEntry: &roleEntry{
-					Cloud:     cloudName,
-					Root:      true,
-					UserRoles: []string{"ur-1"},
-				},
-				errorRegex: notForRootRe,
-			},
 			"without-cloud": {
-				roleEntry:  &roleEntry{},
-				errorRegex: regexp.MustCompile(`cloud is required when creating a role`),
+				roleStaticEntry: &roleStaticEntry{},
+				errorRegex:      regexp.MustCompile(`cloud is required when creating a static role`),
 			},
 		}
 
@@ -444,11 +429,11 @@ func TestRoleCreate(t *testing.T) {
 				t.Parallel()
 
 				roleName := randomRoleName()
-				inputRole := fixtures.SanitizedMap(roleToMap(data.roleEntry))
+				inputRole := fixtures.SanitizedMap(staticRoleToMap(data.roleStaticEntry))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.CreateOperation,
-					Path:      rolePath(roleName),
+					Path:      staticRolePath(roleName),
 					Data:      inputRole,
 					Storage:   s,
 				})
@@ -463,15 +448,16 @@ func TestRoleCreate(t *testing.T) {
 		t.Parallel()
 		b, s := testBackend(t)
 
-		role := &roleEntry{
-			Name:  randomRoleName(),
-			Cloud: randomRoleName(),
+		role := &roleStaticEntry{
+			Name:     randomRoleName(),
+			Cloud:    randomRoleName(),
+			Username: username,
 		}
-		inputRole := fixtures.SanitizedMap(roleToMap(role))
+		inputRole := fixtures.SanitizedMap(staticRoleToMap(role))
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.CreateOperation,
-			Path:      rolePath(role.Name),
+			Path:      staticRolePath(role.Name),
 			Data:      inputRole,
 			Storage:   s,
 		})
@@ -484,35 +470,14 @@ func TestRoleCreate(t *testing.T) {
 		_, s := testBackend(t, failVerbPut)
 		t.Parallel()
 
-		d, _ := expectedRoleData(randomRoleName())
-		err := saveRole(context.Background(), d, s)
+		d, _ := expectedStaticRoleData(randomRoleName())
+		req := logical.Request{Path: staticRolesStoragePath, Storage: s}
+		err := saveStaticRole(context.Background(), d, &req)
 		require.Error(t, err)
 	})
 }
 
-func preCreateCloud(t *testing.T, s logical.Storage) string {
-	t.Helper()
-
-	name := randomRoleName()
-	cloudStoragePath := storageCloudKey(name)
-
-	entry, err := logical.StorageEntryJSON(cloudStoragePath, &OsCloud{
-		Name:           testCloudName,
-		AuthURL:        testAuthURL,
-		UserDomainName: testUserDomainName,
-		Username:       testUsername,
-		Password:       testPassword1,
-	})
-	require.NoError(t, err)
-	require.NoError(t, s.Put(context.Background(), entry))
-
-	t.Cleanup(func() {
-		require.NoError(t, s.Delete(context.Background(), cloudStoragePath))
-	})
-	return name
-}
-
-func TestRoleUpdate(t *testing.T) {
+func TestStaticRoleUpdate(t *testing.T) {
 	t.Parallel()
 
 	b, s := testBackend(t)
@@ -520,18 +485,18 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData(randomRoleName())
-		exp2 := &roleEntry{
+		_, exp := expectedStaticRoleData(randomRoleName())
+		exp2 := &roleStaticEntry{
 			Cloud:       cloudName,
 			ProjectID:   "",
 			ProjectName: tools.RandomString("p", 5),
 		}
-		saveRawRole(t, roleName, exp, s)
+		saveRawStaticRole(t, roleName, exp, s)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      rolePath(roleName),
-			Data:      fixtures.SanitizedMap(roleToMap(exp2)),
+			Path:      staticRolePath(roleName),
+			Data:      fixtures.SanitizedMap(staticRoleToMap(exp2)),
 			Storage:   s,
 		})
 		require.NoError(t, err)
@@ -540,11 +505,11 @@ func TestRoleUpdate(t *testing.T) {
 
 	t.Run("not-existing", func(t *testing.T) {
 		roleName := randomRoleName()
-		_, exp := expectedRoleData(cloudName)
+		_, exp := expectedStaticRoleData(cloudName)
 
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      rolePath(roleName),
+			Path:      staticRolePath(roleName),
 			Data:      exp,
 			Storage:   s,
 		})
@@ -554,16 +519,18 @@ func TestRoleUpdate(t *testing.T) {
 	})
 }
 
-func fillRoleDefaultFields(b *backend, entry *roleEntry) {
-	pr := b.pathRole()
+func fillStaticRoleDefaultFields(b *backend, entry *roleStaticEntry) {
+	pr := b.pathStaticRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
 		entry.SecretType = flds["secret_type"].Default.(secretType)
 	}
 	if !entry.Root {
-		if entry.TTL == 0 {
+		if entry.RotationDuration == 0 {
+			entry.RotationDuration = time.Hour
 			entry.TTL = time.Hour
 		}
 	}
 	entry.TTL /= time.Second
+	entry.RotationDuration /= time.Second
 }

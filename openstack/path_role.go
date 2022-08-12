@@ -74,10 +74,6 @@ func (b *backend) pathRole() *framework.Path {
 				Description: "Specifies whenever to use the root user as a role actor.",
 				Default:     false,
 			},
-			"username": {
-				Type:        framework.TypeString,
-				Description: "Specifies the username of the static user.",
-			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Specifies TTL value for the dynamically created users as a string duration with time suffix.",
@@ -162,7 +158,6 @@ type roleEntry struct {
 	SecretType  secretType        `json:"secret_type"`
 	UserGroups  []string          `json:"user_groups"`
 	UserRoles   []string          `json:"user_roles"`
-	Username    string            `json:"username"`
 	ProjectID   string            `json:"project_id"`
 	ProjectName string            `json:"project_name"`
 	DomainID    string            `json:"domain_id"`
@@ -210,7 +205,6 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"root":         src.Root,
 		"ttl":          src.TTL,
 		"secret_type":  string(src.SecretType),
-		"username":     src.Username,
 		"user_groups":  src.UserGroups,
 		"user_roles":   src.UserRoles,
 		"project_id":   src.ProjectID,
@@ -323,13 +317,6 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse(errInvalidForRoot, "user roles"), nil
 		}
 		entry.UserRoles = roles.([]string)
-	}
-
-	if username, ok := d.GetOk("username"); ok {
-		if entry.Root {
-			return logical.ErrorResponse(errInvalidForRoot, "username"), nil
-		}
-		entry.Username = username.(string)
 	}
 
 	if err := saveRole(ctx, entry, req.Storage); err != nil {
