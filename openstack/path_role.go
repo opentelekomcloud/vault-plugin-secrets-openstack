@@ -74,7 +74,6 @@ func (b *backend) pathRole() *framework.Path {
 				Description: "Specifies whenever to use the root user as a role actor.",
 				Default:     false,
 			},
-
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Specifies TTL value for the dynamically created users as a string duration with time suffix.",

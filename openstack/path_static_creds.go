@@ -112,30 +112,30 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 		Config: cloudConfig,
 	}
 
-	extractedUser, err := getUserInfo(ctx, d, r)
+	//extractedUser, err := getUserInfo(ctx, d, r)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	var user *staticUserEntry
+	//if extractedUser != nil {
+	//	user = extractedUser
+	//} else {
+	password, err := opts.PwdGenerator.Generate(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	var user *staticUserEntry
-	if extractedUser != nil {
-		user = extractedUser
-	} else {
-		password, err := opts.PwdGenerator.Generate(context.Background())
-		if err != nil {
-			return nil, err
-		}
-
-		userName, err := createStaticUser(client, opts.Role.Name, password, opts.Role)
-		if err != nil {
-			return nil, err
-		}
-		user.User = userName
-		user.Password = password
-		if err := saveUserInfo(ctx, user, r); err != nil {
-			return nil, err
-		}
+	userName, err := createStaticUser(client, opts.Role.Name, password, opts.Role)
+	if err != nil {
+		return nil, err
 	}
+	user.User = userName
+	user.Password = password
+	if err := saveUserInfo(ctx, user, r); err != nil {
+		return nil, err
+	}
+	//}
 
 	//if role.Root {
 	//	return getStaticRootCredentials(client, opts, user)
@@ -292,7 +292,7 @@ func createStaticUser(client *gophercloud.ServiceClient, username, password stri
 	userCreateOpts := users.CreateOpts{
 		Name:             username,
 		DefaultProjectID: projectID,
-		Description:      "Vault's temporary user",
+		Description:      "Vault's static user",
 		DomainID:         user.Domain.ID,
 		Password:         password,
 	}

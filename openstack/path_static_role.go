@@ -136,17 +136,18 @@ func (b *backend) staticRoleExistenceCheck(ctx context.Context, r *logical.Reque
 }
 
 type roleStaticEntry struct {
-	Name        string            `json:"name"`
-	Cloud       string            `json:"cloud"`
-	Root        bool              `json:"root"`
-	TTL         time.Duration     `json:"ttl,omitempty"`
-	SecretType  secretType        `json:"secret_type"`
-	Username    string            `json:"username"`
-	ProjectID   string            `json:"project_id"`
-	ProjectName string            `json:"project_name"`
-	DomainID    string            `json:"domain_id"`
-	DomainName  string            `json:"domain_name"`
-	Extensions  map[string]string `json:"extensions"`
+	Name             string            `json:"name"`
+	Cloud            string            `json:"cloud"`
+	Root             bool              `json:"root"`
+	TTL              time.Duration     `json:"ttl,omitempty"`
+	RotationDuration time.Duration     `json:"rotation_duration,omitempty"`
+	SecretType       secretType        `json:"secret_type"`
+	Username         string            `json:"username"`
+	ProjectID        string            `json:"project_id"`
+	ProjectName      string            `json:"project_name"`
+	DomainID         string            `json:"domain_id"`
+	DomainName       string            `json:"domain_name"`
+	Extensions       map[string]string `json:"extensions"`
 }
 
 func roleStaticStoragePath(name string) string {
@@ -186,16 +187,17 @@ func getStaticRoleByName(ctx context.Context, name string, s *logical.Request) (
 
 func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 	return map[string]interface{}{
-		"cloud":        src.Cloud,
-		"root":         src.Root,
-		"ttl":          src.TTL,
-		"secret_type":  string(src.SecretType),
-		"username":     src.Username,
-		"project_id":   src.ProjectID,
-		"project_name": src.ProjectName,
-		"domain_id":    src.DomainID,
-		"domain_name":  src.DomainName,
-		"extensions":   src.Extensions,
+		"cloud":             src.Cloud,
+		"root":              src.Root,
+		"ttl":               src.TTL,
+		"rotation_duration": src.RotationDuration,
+		"secret_type":       string(src.SecretType),
+		"username":          src.Username,
+		"project_id":        src.ProjectID,
+		"project_name":      src.ProjectName,
+		"domain_id":         src.DomainID,
+		"domain_name":       src.DomainName,
+		"extensions":        src.Extensions,
 	}
 }
 
@@ -205,7 +207,7 @@ func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, 
 		return nil, errRoleGet
 	}
 	if entry == nil {
-		return logical.ErrorResponse("role not found"), nil
+		return logical.ErrorResponse("static role not found"), nil
 	}
 
 	data := staticRoleToMap(entry)
@@ -221,14 +223,14 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		cloudName = cloud.(string)
 	} else {
 		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("cloud is required when creating a role"), nil
+			return logical.ErrorResponse("cloud is required when creating a static role"), nil
 		}
 	}
 	if username, ok := d.GetOk("username"); ok {
 		userName = username.(string)
 	} else {
 		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("username is required when creating a role"), nil
+			return logical.ErrorResponse("username is required when creating a static role"), nil
 		}
 	}
 	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
@@ -250,7 +252,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 	}
 	if entry == nil {
 		if req.Operation == logical.UpdateOperation {
-			return logical.ErrorResponse("role `%s` not found during update operation", name), nil
+			return logical.ErrorResponse("static role `%s` not found during update operation", name), nil
 		}
 		entry = &roleStaticEntry{Name: name, Cloud: cloudName}
 	}
@@ -271,6 +273,12 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		if _, ok := d.GetOk("ttl"); ok {
 			return logical.ErrorResponse(errInvalidForRoot, "ttl"), nil
 		}
+	}
+
+	if rotation, ok := d.GetOk("rotation_duration"); ok {
+		entry.RotationDuration = time.Duration(rotation.(int))
+	} else if req.Operation == logical.CreateOperation {
+		entry.RotationDuration = time.Hour / time.Second
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
@@ -320,31 +328,31 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 		return &logical.Response{}, nil
 	}
 
-	role, err := getStaticRoleByName(ctx, name, req)
-	if err != nil {
-		return nil, err
-	}
-
-	sharedCloud := b.getSharedCloud(role.Cloud)
-	client, err := sharedCloud.getClient(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := getUserInfoByName(ctx, name, req)
-	if err != nil {
-		return nil, err
-	}
-
-	delUser := deleteUser(client, user.User.ID)
-	if delUser != nil {
-		return nil, err
-	}
-
-	err = req.Storage.Delete(ctx, staticCredsStoragePath(name))
-	if err != nil {
-		return nil, err
-	}
+	//role, err := getStaticRoleByName(ctx, name, req)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//sharedCloud := b.getSharedCloud(role.Cloud)
+	//client, err := sharedCloud.getClient(ctx, req.Storage)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//user, err := getUserInfoByName(ctx, name, req)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//delUser := deleteUser(client, user.User.ID)
+	//if delUser != nil {
+	//	return nil, err
+	//}
+	//
+	//err = req.Storage.Delete(ctx, staticCredsStoragePath(name))
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	err = req.Storage.Delete(ctx, roleStaticStoragePath(name))
 	return nil, err

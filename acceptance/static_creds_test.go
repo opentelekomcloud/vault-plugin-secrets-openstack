@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +28,6 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 		DomainID   string
 		Root       bool
 		SecretType string
-		Extensions map[string]interface{}
 		Username   string
 	}
 
@@ -70,7 +68,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			resp, err = p.vaultDo(
 				http.MethodPost,
 				staticRoleURL(roleName),
-				cloudToStaticRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.Username, data.SecretType, data.Extensions),
+				cloudToStaticRoleMap(data.Root, data.Cloud, data.ProjectID, data.DomainID, data.Username, data.SecretType),
 			)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
@@ -87,7 +85,6 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 				staticCredsURL(roleName),
 				nil,
 			)
-			logical.ErrorResponse("response of our err", err)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
 
@@ -101,7 +98,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			//
 			//resp, err = p.vaultDo(
 			//	http.MethodDelete,
-			//	roleURL(roleName),
+			//	staticRoleURL(roleName),
 			//	nil,
 			//)
 			//require.NoError(t, err)
@@ -109,7 +106,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			//
 			//resp, err = p.vaultDo(
 			//	http.MethodDelete,
-			//	cloudURL(cloudName),
+			//	staticRoleURL(cloudName),
 			//	nil,
 			//)
 			//require.NoError(t, err)
@@ -122,18 +119,13 @@ func staticCredsURL(roleName string) string {
 	return fmt.Sprintf("/v1/openstack/static-creds/%s", roleName)
 }
 
-func staticRoleURL(name string) string {
-	return fmt.Sprintf("/v1/openstack/static-role/%s", name)
-}
-
-func cloudToStaticRoleMap(root bool, cloud, projectID, domainID, username string, secretType string, extensions map[string]interface{}) map[string]interface{} {
+func cloudToStaticRoleMap(root bool, cloud, projectID, domainID, username string, secretType string) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
 		"cloud":       cloud,
 		"project_id":  projectID,
 		"domain_id":   domainID,
 		"root":        root,
 		"secret_type": secretType,
-		"extensions":  extensions,
 		"username":    username,
 	})
 }
