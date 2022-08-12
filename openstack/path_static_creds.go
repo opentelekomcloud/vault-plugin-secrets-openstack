@@ -22,12 +22,12 @@ This path allows you to read OpenStack secret stored by predefined static roles.
 )
 
 type staticUserEntry struct {
-	User     *users.User
-	Password string
+	User     *users.User `json:"user"`
+	Password string      `json:"password"`
 }
 
 func staticCredsStoragePath(name string) string {
-	return fmt.Sprintf("%s/%s", "static-creds/", name)
+	return fmt.Sprintf("%s/%s", pathStaticCreds, name)
 }
 
 func saveUserInfo(ctx context.Context, e *staticUserEntry, s *logical.Request) error {
@@ -88,13 +88,12 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	}
 
 	sharedCloud := b.getSharedCloud(role.Cloud)
-
-	client, err := sharedCloud.getClient(ctx, r.Storage)
+	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
+	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -138,48 +137,48 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	return getStaticUserCredentials(client, opts, user)
 }
 
-func getStaticRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts, user *staticUserEntry) (*logical.Response, error) {
-	if opts.Role.SecretType == SecretPassword {
-		return nil, errRootNotToken
-	}
-	tokenOpts := &tokens.AuthOptions{
-		Username:   opts.Config.Username,
-		Password:   opts.Config.Password,
-		DomainName: opts.Config.UserDomainName,
-		Scope:      getScopeFromRole(opts.Role),
-	}
-
-	token, err := createToken(client, tokenOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	authResponse := &authResponseData{
-		AuthURL:    opts.Config.AuthURL,
-		Token:      token.ID,
-		DomainName: opts.Config.UserDomainName,
-	}
-
-	data := map[string]interface{}{
-		"auth": formAuthResponse(
-			opts.Role,
-			authResponse,
-		),
-		"auth_type": "token",
-	}
-	secret := &logical.Secret{
-		LeaseOptions: logical.LeaseOptions{
-			TTL:       time.Until(token.ExpiresAt),
-			IssueTime: time.Now(),
-		},
-		InternalData: map[string]interface{}{
-			"secret_type": backendSecretTypeToken,
-			"cloud":       opts.Config.Name,
-			"expires_at":  token.ExpiresAt.String(),
-		},
-	}
-	return &logical.Response{Data: data, Secret: secret}, nil
-}
+//func getStaticRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts, user *staticUserEntry) (*logical.Response, error) {
+//	if opts.Role.SecretType == SecretPassword {
+//		return nil, errRootNotToken
+//	}
+//	tokenOpts := &tokens.AuthOptions{
+//		Username:   opts.Config.Username,
+//		Password:   opts.Config.Password,
+//		DomainName: opts.Config.UserDomainName,
+//		Scope:      getScopeFromRole(opts.Role),
+//	}
+//
+//	token, err := createToken(client, tokenOpts)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	authResponse := &authResponseData{
+//		AuthURL:    opts.Config.AuthURL,
+//		Token:      token.ID,
+//		DomainName: opts.Config.UserDomainName,
+//	}
+//
+//	data := map[string]interface{}{
+//		"auth": formAuthResponse(
+//			opts.Role,
+//			authResponse,
+//		),
+//		"auth_type": "token",
+//	}
+//	secret := &logical.Secret{
+//		LeaseOptions: logical.LeaseOptions{
+//			TTL:       time.Until(token.ExpiresAt),
+//			IssueTime: time.Now(),
+//		},
+//		InternalData: map[string]interface{}{
+//			"secret_type": backendSecretTypeToken,
+//			"cloud":       opts.Config.Name,
+//			"expires_at":  token.ExpiresAt.String(),
+//		},
+//	}
+//	return &logical.Response{Data: data, Secret: secret}, nil
+//}
 
 func getStaticUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts, user *staticUserEntry) (*logical.Response, error) {
 	var data map[string]interface{}

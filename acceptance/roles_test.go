@@ -63,7 +63,7 @@ func (p *PluginTest) TestRoleLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 	})
-
+	time.Sleep(200 * time.Second)
 	t.Run("ReadRole", func(t *testing.T) {
 		resp, err := p.vaultDo(
 			http.MethodGet,

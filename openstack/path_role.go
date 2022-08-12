@@ -164,6 +164,7 @@ func saveRole(ctx context.Context, e *roleEntry, s *logical.Request) error {
 	if err != nil {
 		return err
 	}
+
 	return s.Storage.Put(ctx, storageEntry)
 }
 
