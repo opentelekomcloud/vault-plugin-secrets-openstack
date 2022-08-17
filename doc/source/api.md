@@ -440,10 +440,6 @@ created. If the role exists, it will be updated with the new attributes.
 
 - `username` `(string: <required>)` - Specifies username of user managed by the static role.
 
-- `root` `(bool: <optional>)` - Specifies whenever to use the root user as a role actor.
-  If set to `true`, `secret_type` can't be set to `password`.
-  If set to `true`, `ttl` value is ignored.
-
 - `rotation_duration` `(string: "1h")` - Specifies password rotation time value for the static user as a
   string duration with time suffix.
 
@@ -487,17 +483,6 @@ $ curl \
 ```json
 {
   "cloud": "example-cloud",
-  "project_name": "test",
-  "username": "test-user"
-}
-```
-
-#### Creating a static role using root user
-
-```json
-{
-  "cloud": "example-cloud",
-  "root": true,
   "project_name": "test",
   "username": "test-user"
 }
@@ -582,6 +567,77 @@ $ curl \
       "default-cloud-role-1",
       "default-cloud-role-2"
     ]
+  }
+}
+```
+
+## Read Static Role Credentials
+
+This endpoint returns user credentials based on the named static role.
+
+| Method   | Path                            |
+|:---------|:--------------------------------|
+| `GET`    | `/openstack/static-creds/:name` |
+
+### Parameters
+
+- `name` (`string: <required>`) - Specifies the name of the role to return credentials against.
+
+### Sample Request
+
+```shell
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/openstack/static-creds/example-role
+```
+
+### Sample Responses
+
+#### Credentials for the token-type static role
+
+```json
+{
+  "data": {
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb...",
+      "project_name": "test",
+      "project_domain_id": "Default"
+    },
+    "auth_type": "token"
+  }
+}
+```
+
+#### Credentials for the password-type static role with project scope
+
+```json
+{
+  "data": {
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "username": "admin",
+      "password": "RcigTiYrJjVmEkrV71Cd",
+      "project_name": "test",
+      "project_domain_id": "Default"
+    },
+    "auth_type": "password"
+  }
+}
+```
+
+#### Credentials for the password-type static role with domain scope
+
+```json
+{
+  "data": {
+    "auth": {
+      "auth_url": "https://example.com/v3/",
+      "username": "admin",
+      "password": "RcigTiYrJjVmEkrV71Cd",
+      "user_domain_id": "Default"
+    },
+    "auth_type": "password"
   }
 }
 ```

@@ -129,11 +129,71 @@ func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
         "links": {
             "self": "https://example.com/identity/v3/users/%[1]s"
         },
-        "name": "James Doe",
+        "name": "James_Doe",
         "password_expires_at": "2016-11-06T15:32:17.000000"
     }
 }
 `, userID)
+}
+
+func handleUpdateUser(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Content-Type", "application/json")
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "PATCH")
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `
+{
+    "user": {
+        "default_project_id": "project",
+        "description": "James Doe user",
+        "domain_id": "domain",
+        "email": "jdoe@example.com",
+        "enabled": true,
+        "id": "%s",
+        "links": {
+            "self": "https://example.com/identity/v3/users/29148f9awu90f1u2"
+        },
+        "name": "James_Doe",
+        "password_expires_at": "2016-11-06T15:32:17.000000"
+    }
+}
+`, userID)
+}
+
+func handleListUsers(t *testing.T, w http.ResponseWriter, r *http.Request, userID string, userName string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "GET")
+
+	w.Header().Add("Content-Type", "application/json")
+
+	_, _ = fmt.Fprintf(w, `
+{
+  "users": [
+    {
+        "default_project_id": "project",
+        "description": "James Doe user",
+        "domain_id": "domain",
+        "email": "jdoe@example.com",
+        "enabled": true,
+        "id": "%s",
+        "links": {
+            "self": "https://example.com/identity/v3/users/29148f9awu90f1u2"
+        },
+        "name": "%s",
+        "password_expires_at": "2016-11-06T15:32:17.000000"
+    }
+  ],
+  "links": {
+    "next": null,
+    "previous": null
+  }
+}
+`, userID, userName)
 }
 
 func handleProjectList(t *testing.T, w http.ResponseWriter, r *http.Request, projectName string) {
@@ -179,6 +239,8 @@ type EnabledMocks struct {
 	PasswordChange bool
 	ProjectList    bool
 	UserPost       bool
+	UserPatch      bool
+	UserList       bool
 	UserDelete     bool
 }
 
@@ -213,6 +275,10 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 			if enabled.UserPost {
 				handleCreateUser(t, w, r, userID)
 			}
+		case "GET":
+			if enabled.UserList {
+				handleListUsers(t, w, r, userID, projectName)
+			}
 		default:
 			w.WriteHeader(404)
 		}
@@ -236,6 +302,14 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 			th.TestMethod(t, r, "POST")
 
 			w.WriteHeader(http.StatusNoContent)
+		})
+	}
+
+	if enabled.UserPatch {
+		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
+			th.TestMethod(t, r, "PATCH")
+
+			handleUpdateUser(t, w, r, userID)
 		})
 	}
 
