@@ -147,7 +147,7 @@ type roleStaticEntry struct {
 	SecretType       secretType        `json:"secret_type"`
 	Secret           string            `json:"secret"`
 	Username         string            `json:"username"`
-	UserId           string            `json:"user_id"`
+	UserID           string            `json:"user_id"`
 	ProjectID        string            `json:"project_id"`
 	ProjectName      string            `json:"project_name"`
 	DomainID         string            `json:"domain_id"`
@@ -266,7 +266,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 			return logical.ErrorResponse("error during role creation: %s", err), nil
 		}
 
-		entry.UserId = userId
+		entry.UserID = userId
 		entry.Secret = password
 
 	} else if req.Operation == logical.CreateOperation {
