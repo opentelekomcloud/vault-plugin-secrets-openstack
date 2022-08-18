@@ -151,7 +151,6 @@ func TestStaticCredentialsRead_error(t *testing.T) {
 }
 
 func TestRotateStaticCredentials_ok(t *testing.T) {
-	t.Parallel()
 	userID, _ := uuid.GenerateUUID()
 	secret, _ := uuid.GenerateUUID()
 	projectName := tools.RandomString("p", 5)
