@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
+	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -37,13 +38,11 @@ func expectedStaticRoleData(cloudName string) (*roleStaticEntry, map[string]inte
 	}
 	expectedMap := map[string]interface{}{
 		"cloud":             expected.Cloud,
-		"ttl":               expTTL,
 		"project_id":        "",
 		"project_name":      expected.ProjectName,
 		"domain_id":         "",
 		"domain_name":       expected.DomainName,
 		"extensions":        map[string]string{},
-		"root":              false,
 		"rotation_duration": expTTL,
 		"secret_type":       "token",
 		"username":          "static-test",
@@ -194,7 +193,7 @@ func TestStaticRoleList(t *testing.T) {
 		b, s := testBackend(t, failVerbList)
 		_, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ListOperation,
-			Path:      "roles/",
+			Path:      "static-roles/",
 			Storage:   s,
 		})
 		require.Error(t, err)
@@ -309,49 +308,61 @@ func TestStaticRoleDelete(t *testing.T) {
 }
 
 func TestStaticRoleCreate(t *testing.T) {
+	username := "James_Doe"
+	userID, _ := uuid.GenerateUUID()
+
+	fixtures.SetupKeystoneMock(t, userID, username, fixtures.EnabledMocks{
+		TokenPost: true,
+		TokenGet:  true,
+		UserPatch: true,
+		UserList:  true,
+	})
+
+	testClient := thClient.ServiceClient()
+	authURL := testClient.Endpoint + "v3"
+
+	b, s := testBackend(t)
+	cloudEntry, err := logical.StorageEntryJSON(storageCloudKey(testCloudName), &OsCloud{
+		Name:             testCloudName,
+		AuthURL:          authURL,
+		UserDomainName:   testUserDomainName,
+		Username:         testUsername,
+		Password:         testPassword1,
+		UsernameTemplate: testTemplate1,
+	})
+	require.NoError(t, err)
+
 	t.Parallel()
-	username := tools.RandomString("user", 5)
-	id, _ := uuid.GenerateUUID()
+
 	t.Run("ok", func(t *testing.T) {
 
-		b, s := testBackend(t)
-		cloudName := preCreateCloud(t, s)
-
 		cases := map[string]*roleStaticEntry{
-			"admin": {
-				Name:     randomRoleName(),
-				Cloud:    cloudName,
-				Root:     true,
-				Username: username,
-			},
 			"token": {
 				Name:        randomRoleName(),
-				Cloud:       cloudName,
+				Cloud:       testCloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretToken,
 				Username:    username,
 			},
 			"password": {
 				Name:        randomRoleName(),
-				Cloud:       cloudName,
+				Cloud:       testCloudName,
 				ProjectName: randomRoleName(),
 				SecretType:  SecretPassword,
 				Username:    username,
 			},
 			"rotation_duration": {
 				Name:             randomRoleName(),
-				Cloud:            cloudName,
+				Cloud:            testCloudName,
 				ProjectName:      randomRoleName(),
 				SecretType:       SecretToken,
 				Username:         username,
 				RotationDuration: 24 * time.Hour,
-				TTL:              24 * time.Hour,
 			},
 			"endpoint-override": {
-				Name:      randomRoleName(),
-				Cloud:     cloudName,
-				Username:  username,
-				ProjectID: id,
+				Name:     randomRoleName(),
+				Cloud:    testCloudName,
+				Username: username,
 				Extensions: map[string]string{
 					"volume_api_version":             "3",
 					"object_store_endpoint_override": "https://swift.example.com",
@@ -363,7 +374,7 @@ func TestStaticRoleCreate(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				data := data
 				t.Parallel()
-
+				require.NoError(t, s.Put(context.Background(), cloudEntry))
 				roleName := data.Name
 				inputRole := fixtures.SanitizedMap(staticRoleToMap(data))
 
@@ -382,7 +393,8 @@ func TestStaticRoleCreate(t *testing.T) {
 				role := new(roleStaticEntry)
 				assert.NoError(t, entry.DecodeJSON(role))
 
-				fillStaticRoleDefaultFields(b, data) // otherwise there will be false positives
+				fillActualStaticRoleDefaultFields(role)
+				fillExpectedStaticRoleDefaultFields(b, data) // otherwise there will be false positives
 				assert.Equal(t, data, role)
 			})
 		}
@@ -397,25 +409,13 @@ func TestStaticRoleCreate(t *testing.T) {
 		b, s := testBackend(t)
 		cloudName := preCreateCloud(t, s)
 
-		notForRootRe := regexp.MustCompile(`impossible to set .+ for the root user`)
 		cases := map[string]*errRoleEntry{
-			"root-ttl": {
+			"username": {
 				roleStaticEntry: &roleStaticEntry{
 					Cloud:            cloudName,
-					Username:         username,
-					Root:             true,
 					RotationDuration: 1 * time.Hour,
 				},
-				errorRegex: notForRootRe,
-			},
-			"root-password": {
-				roleStaticEntry: &roleStaticEntry{
-					Cloud:      cloudName,
-					Username:   username,
-					Root:       true,
-					SecretType: SecretPassword,
-				},
-				errorRegex: notForRootRe,
+				errorRegex: regexp.MustCompile(`username is required when creating a static role`),
 			},
 			"without-cloud": {
 				roleStaticEntry: &roleStaticEntry{},
@@ -519,18 +519,21 @@ func TestStaticRoleUpdate(t *testing.T) {
 	})
 }
 
-func fillStaticRoleDefaultFields(b *backend, entry *roleStaticEntry) {
+func fillExpectedStaticRoleDefaultFields(b *backend, entry *roleStaticEntry) {
 	pr := b.pathStaticRole()
 	flds := pr.Fields
 	if entry.SecretType == "" {
 		entry.SecretType = flds["secret_type"].Default.(secretType)
 	}
-	if !entry.Root {
-		if entry.RotationDuration == 0 {
-			entry.RotationDuration = time.Hour
-			entry.TTL = time.Hour
-		}
+
+	if entry.RotationDuration == 0 {
+		entry.RotationDuration = time.Hour
 	}
-	entry.TTL /= time.Second
 	entry.RotationDuration /= time.Second
+}
+
+func fillActualStaticRoleDefaultFields(entry *roleStaticEntry) {
+	entry.Secret = ""
+	entry.UserID = ""
+	entry.TTL = 0
 }

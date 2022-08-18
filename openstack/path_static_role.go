@@ -60,19 +60,14 @@ func (b *backend) pathStaticRole() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Specifies root configuration of the created static role.",
 			},
-			"root": {
-				Type:        framework.TypeBool,
-				Description: "Specifies whenever to use the root static user as a role actor.",
-				Default:     false,
-			},
-			"ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "Specifies password rotation time left until next password rotation..",
-				Default:     "1h",
-			},
 			"rotation_duration": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Specifies the duration of static role password rotation.",
+				Default:     "1h",
+			},
+			"ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Internal field which specifies the remaining time for the next password rotation.",
 				Default:     "1h",
 			},
 			"secret_type": {
@@ -81,9 +76,18 @@ func (b *backend) pathStaticRole() *framework.Path {
 				AllowedValues: []interface{}{"token", "password"},
 				Default:       SecretToken,
 			},
+			"secret": {
+				Type: framework.TypeString,
+				Description: "Internal field for Openstack user password which will be rotated " +
+					"upon static role creation.",
+			},
 			"username": {
 				Type:        framework.TypeNameString,
-				Description: "Specifies a domain name for domain-scoped role.",
+				Description: "Specifies a username for static role.",
+			},
+			"user_id": {
+				Type:        framework.TypeNameString,
+				Description: "Internal field with static user id for further user management. Set once on role creation",
 			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
@@ -138,11 +142,12 @@ func (b *backend) staticRoleExistenceCheck(ctx context.Context, r *logical.Reque
 type roleStaticEntry struct {
 	Name             string            `json:"name"`
 	Cloud            string            `json:"cloud"`
-	Root             bool              `json:"root"`
 	TTL              time.Duration     `json:"ttl,omitempty"`
 	RotationDuration time.Duration     `json:"rotation_duration,omitempty"`
 	SecretType       secretType        `json:"secret_type"`
+	Secret           string            `json:"secret"`
 	Username         string            `json:"username"`
+	UserID           string            `json:"user_id"`
 	ProjectID        string            `json:"project_id"`
 	ProjectName      string            `json:"project_name"`
 	DomainID         string            `json:"domain_id"`
@@ -188,8 +193,6 @@ func getStaticRoleByName(ctx context.Context, name string, s *logical.Request) (
 func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 	return map[string]interface{}{
 		"cloud":             src.Cloud,
-		"root":              src.Root,
-		"ttl":               src.RotationDuration,
 		"rotation_duration": src.RotationDuration,
 		"secret_type":       string(src.SecretType),
 		"username":          src.Username,
@@ -218,7 +221,6 @@ func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, 
 
 func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var cloudName string
-	var userName string
 	if cloud, ok := d.GetOk("cloud"); ok {
 		cloudName = cloud.(string)
 	} else {
@@ -227,19 +229,12 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
-	if username, ok := d.GetOk("username"); ok {
-		userName = username.(string)
-	} else {
-		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("username is required when creating a static role"), nil
-		}
-	}
-
-	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
+	cloud := b.getSharedCloud(cloudName)
+	cloudConfig, err := cloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if cld == nil {
+	if cloudConfig == nil {
 		return logical.ErrorResponse("cloud `%s` doesn't exist", cloudName), nil
 	}
 
@@ -259,30 +254,34 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		entry = &roleStaticEntry{Name: name, Cloud: cloudName}
 	}
 
-	entry.Username = userName
+	if username, ok := d.GetOk("username"); ok && req.Operation == logical.CreateOperation {
+		entry.Username = username.(string)
+		password, err := Passwords{}.Generate(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	if isRoot, ok := d.GetOk("root"); ok {
-		entry.Root = isRoot.(bool)
+		userId, err := b.rotateUserPassword(ctx, req, cloud, username.(string), password)
+		if err != nil {
+			return logical.ErrorResponse("error during role creation: %s", err), nil
+		}
+
+		entry.UserID = userId
+		entry.Secret = password
+
+	} else if req.Operation == logical.CreateOperation {
+		return logical.ErrorResponse("username is required when creating a static role"), nil
 	}
 
-	if !entry.Root {
-		if rotation, ok := d.GetOk("rotation_duration"); ok {
-			entry.RotationDuration = time.Duration(rotation.(int))
-			entry.TTL = time.Duration(rotation.(int))
-		} else if req.Operation == logical.CreateOperation {
-			entry.RotationDuration = time.Hour / time.Second
-			entry.TTL = time.Hour / time.Second
-		}
-	} else {
-		if _, ok := d.GetOk("rotation_duration"); ok {
-			return logical.ErrorResponse(errInvalidForRoot, "rotation_duration"), nil
-		}
+	if rotation, ok := d.GetOk("rotation_duration"); ok {
+		entry.RotationDuration = time.Duration(rotation.(int))
+		entry.TTL = time.Duration(rotation.(int))
+	} else if req.Operation == logical.CreateOperation {
+		entry.RotationDuration = time.Hour / time.Second
+		entry.TTL = time.Hour / time.Second
 	}
 
 	if typ, ok := d.GetOk("secret_type"); ok {
-		if entry.Root && typ != SecretToken {
-			return logical.ErrorResponse(errInvalidForRoot, "secret type"), nil
-		}
 		entry.SecretType = secretType(typ.(string))
 	} else if req.Operation == logical.CreateOperation {
 		entry.SecretType = SecretToken
