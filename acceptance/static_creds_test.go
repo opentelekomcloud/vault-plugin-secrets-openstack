@@ -10,20 +10,18 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 )
 
 type testStaticCase struct {
-	Cloud      string
-	ProjectID  string
-	DomainID   string
-	Root       bool
-	SecretType string
-	Username   string
-	Extensions map[string]interface{}
+	cloud      string
+	projectID  string
+	domainID   string
+	secretType string
+	username   string
+	extensions map[string]interface{}
 }
 
 func (p *PluginTest) TestStaticCredsLifecycle() {
@@ -35,6 +33,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 	client, aux := openstackClient(t)
 
 	userRoleName := "member"
+	allRoles := getAllRoles(t, client)
 
 	dataCloud := map[string]interface{}{
 		"auth_url":         cloud.AuthURL,
@@ -45,19 +44,19 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 
 	cases := map[string]testStaticCase{
 		"user_password": {
-			Cloud:      cloud.Name,
-			ProjectID:  aux.ProjectID,
-			DomainID:   aux.DomainID,
-			Username:   "static-test-1",
-			SecretType: "password",
+			cloud:      cloud.Name,
+			projectID:  aux.ProjectID,
+			domainID:   aux.DomainID,
+			username:   "static-test-1",
+			secretType: "password",
 		},
 		"user_token": {
-			Cloud:      cloud.Name,
-			ProjectID:  aux.ProjectID,
-			DomainID:   aux.DomainID,
-			Username:   "static-test-2",
-			SecretType: "token",
-			Extensions: map[string]interface{}{
+			cloud:      cloud.Name,
+			projectID:  aux.ProjectID,
+			domainID:   aux.DomainID,
+			username:   "static-test-2",
+			secretType: "token",
+			extensions: map[string]interface{}{
 				"identity_api_version": "3",
 			},
 		},
@@ -69,34 +68,18 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 
 			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
+			userId := userSetup(t, client, data, aux, userRoleName, allRoles)
+			t.Cleanup(func() {
+				require.NoError(t, users.Delete(client, userId).ExtractErr())
+			})
+
 			resp, err := p.vaultDo(
 				http.MethodPost,
 				cloudURL(cloudName),
 				dataCloud,
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
-
-			createUserOpts := users.CreateOpts{
-				Name:             data.Username,
-				Description:      "Static user",
-				DefaultProjectID: aux.ProjectID,
-				DomainID:         aux.DomainID,
-				Password:         openstack.RandomString(openstack.PwdDefaultSet, 16),
-			}
-			user, err := users.Create(client, createUserOpts).Extract()
-			require.NoError(t, err)
-
-			rolesToAdd, err := filterRole(client, userRoleName)
-			require.NoError(t, err)
-
-			assignOpts := roles.AssignOpts{
-				UserID:    user.ID,
-				ProjectID: aux.ProjectID,
-			}
-
-			err = roles.Assign(client, rolesToAdd.ID, assignOpts).ExtractErr()
-			require.NoError(t, err)
+			assertStatusCode(t, http.StatusNoContent, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodPost,
@@ -104,7 +87,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 				cloudToStaticRoleMap(data),
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
+			assertStatusCode(t, http.StatusNoContent, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodGet,
@@ -112,7 +95,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+			assertStatusCode(t, http.StatusOK, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodGet,
@@ -120,7 +103,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 				nil,
 			)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode, readJSONResponse(t, resp))
+			assertStatusCode(t, http.StatusOK, resp)
 
 			resp, err = p.vaultDo(
 				http.MethodDelete,
@@ -137,10 +120,6 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			)
 			require.NoError(t, err)
 			assertStatusCode(t, http.StatusNoContent, resp)
-
-			t.Cleanup(func() {
-				require.NoError(t, users.Delete(client, user.ID).ExtractErr())
-			})
 		})
 	}
 }
@@ -151,25 +130,49 @@ func staticCredsURL(roleName string) string {
 
 func cloudToStaticRoleMap(data testStaticCase) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
-		"cloud":       data.Cloud,
-		"project_id":  data.ProjectID,
-		"domain_id":   data.DomainID,
-		"secret_type": data.SecretType,
-		"username":    data.Username,
-		"extensions":  data.Extensions,
+		"cloud":       data.cloud,
+		"project_id":  data.projectID,
+		"domain_id":   data.domainID,
+		"secret_type": data.secretType,
+		"username":    data.username,
+		"extensions":  data.extensions,
 	})
 }
 
-func filterRole(client *gophercloud.ServiceClient, roleName string) (*roles.Role, error) {
-	rolePages, err := roles.List(client, roles.ListOpts{Name: roleName}).AllPages()
-	if err != nil {
-		return nil, fmt.Errorf("unable to query roles: %w", err)
-	}
+func getAllRoles(t *testing.T, client *gophercloud.ServiceClient) map[string]roles.Role {
+	rolePages, err := roles.List(client, nil).AllPages()
+	require.NoError(t, err)
 
 	roleList, err := roles.ExtractRoles(rolePages)
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve roles: %w", err)
+	require.NoError(t, err)
+
+	result := make(map[string]roles.Role, len(roleList))
+
+	for _, role := range roleList {
+		result[role.Name] = role
 	}
 
-	return &roleList[0], nil
+	return result
+}
+
+func userSetup(t *testing.T, client *gophercloud.ServiceClient, data testStaticCase, aux *AuxiliaryData, userRoleName string, role map[string]roles.Role) string {
+	createUserOpts := users.CreateOpts{
+		Name:             data.username,
+		Description:      "Static user",
+		DefaultProjectID: aux.ProjectID,
+		DomainID:         aux.DomainID,
+		Password:         openstack.RandomString(openstack.PwdDefaultSet, 16),
+	}
+	user, err := users.Create(client, createUserOpts).Extract()
+	require.NoError(t, err)
+
+	assignOpts := roles.AssignOpts{
+		UserID:    user.ID,
+		ProjectID: aux.ProjectID,
+	}
+
+	err = roles.Assign(client, role[userRoleName].ID, assignOpts).ExtractErr()
+	require.NoError(t, err)
+
+	return user.ID
 }

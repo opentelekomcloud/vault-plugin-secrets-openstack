@@ -215,12 +215,12 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
-	scloud := b.getSharedCloud(cloudName)
-	cld, err := scloud.getCloudConfig(ctx, req.Storage)
+	cloud := b.getSharedCloud(cloudName)
+	cloudConfig, err := cloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if cld == nil {
+	if cloudConfig == nil {
 		return logical.ErrorResponse("cloud `%s` doesn't exist", cloudName), nil
 	}
 
@@ -247,7 +247,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 
-		userId, err := b.rotateUserPassword(ctx, req, scloud, username.(string), password)
+		userId, err := b.rotateUserPassword(ctx, req, cloud, username.(string), password)
 		if err != nil {
 			return logical.ErrorResponse("error during role creation: %s", err), nil
 		}

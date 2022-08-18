@@ -71,6 +71,10 @@ func (p *PluginTest) TestStaticRoleLifecycle() {
 	user, err := users.Create(client, createUserOpts).Extract()
 	require.NoError(t, err)
 
+	t.Cleanup(func() {
+		require.NoError(t, users.Delete(client, user.ID).ExtractErr())
+	})
+
 	data := expectedStaticRoleData(cloud.Name, aux)
 	roleName := "test-write"
 	t.Run("WriteRole", func(t *testing.T) {
@@ -101,10 +105,6 @@ func (p *PluginTest) TestStaticRoleLifecycle() {
 			Username:         data["username"].(string),
 		}
 		assert.Equal(t, expected, extractStaticRoleData(t, resp))
-	})
-
-	t.Cleanup(func() {
-		require.NoError(t, users.Delete(client, user.ID).ExtractErr())
 	})
 
 	t.Run("ListRoles", func(t *testing.T) {

@@ -129,7 +129,7 @@ func handleCreateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
         "links": {
             "self": "https://example.com/identity/v3/users/%[1]s"
         },
-        "name": "James_Doe",
+        "name": "James Doe",
         "password_expires_at": "2016-11-06T15:32:17.000000"
     }
 }
@@ -156,7 +156,7 @@ func handleUpdateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
         "links": {
             "self": "https://example.com/identity/v3/users/29148f9awu90f1u2"
         },
-        "name": "James_Doe",
+        "name": "James Doe",
         "password_expires_at": "2016-11-06T15:32:17.000000"
     }
 }

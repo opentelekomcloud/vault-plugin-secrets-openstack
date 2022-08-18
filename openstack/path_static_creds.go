@@ -157,12 +157,10 @@ func formStaticAuthResponse(role *roleStaticEntry, authResponse *authStaticRespo
 			"project_id": role.ProjectID,
 		}
 	case role.ProjectName != "":
-
 		auth = map[string]interface{}{
 			"project_name":      role.ProjectName,
 			"project_domain_id": authResponse.DomainID,
 		}
-
 	default:
 
 		auth = map[string]interface{}{

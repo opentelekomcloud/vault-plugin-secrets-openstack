@@ -291,7 +291,7 @@ func TestStaticRoleDelete(t *testing.T) {
 	})
 
 	t.Run("error-get", func(t *testing.T) {
-		//t.Parallel()
+		t.Parallel()
 		b, s := testBackend(t, failVerbRead)
 
 		roleName := randomRoleName()
