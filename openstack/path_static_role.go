@@ -85,6 +85,10 @@ func (b *backend) pathStaticRole() *framework.Path {
 				Type:        framework.TypeNameString,
 				Description: "Specifies a username for static role.",
 			},
+			"user_id": {
+				Type:        framework.TypeNameString,
+				Description: "Internal field with static user id for further user management. Set once on role creation",
+			},
 			"project_id": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Specifies a project ID for project-scoped role.",

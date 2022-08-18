@@ -68,7 +68,7 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 
 			roleName := openstack.RandomString(openstack.NameDefaultSet, 4)
 
-			userId := userSetup(t, client, data, aux, allRoles[userRoleName])
+			userId := userSetup(t, client, data, aux, allRoles[userRoleName].ID)
 			t.Cleanup(func() {
 				require.NoError(t, users.Delete(client, userId).ExtractErr())
 			})
@@ -155,7 +155,7 @@ func getAllRoles(t *testing.T, client *gophercloud.ServiceClient) map[string]rol
 	return result
 }
 
-func userSetup(t *testing.T, client *gophercloud.ServiceClient, data testStaticCase, aux *AuxiliaryData, role roles.Role) string {
+func userSetup(t *testing.T, client *gophercloud.ServiceClient, data testStaticCase, aux *AuxiliaryData, roleID string) string {
 	createUserOpts := users.CreateOpts{
 		Name:             data.username,
 		Description:      "Static user",
@@ -171,7 +171,7 @@ func userSetup(t *testing.T, client *gophercloud.ServiceClient, data testStaticC
 		ProjectID: aux.ProjectID,
 	}
 
-	err = roles.Assign(client, role.ID, assignOpts).ExtractErr()
+	err = roles.Assign(client, roleID, assignOpts).ExtractErr()
 	require.NoError(t, err)
 
 	return user.ID
