@@ -641,3 +641,24 @@ $ curl \
   }
 }
 ```
+
+## Rotate Static Role Credentials
+
+When you have configured Vault with static role, you can use this endpoint to have the Vault rotate the password
+for the static user. Password change will be performed.
+
+Once this method is called, password for static user related to static role will be updated.
+
+| Method | Path                           |
+|:-------|:-------------------------------|
+| `POST` | `/openstack/rotate-role/:name` |
+| `PUT`  | `/openstack/rotate-role/:name` |
+
+### Sample Request
+
+```shell
+$ curl \
+  --header "X-Vault-Token: ..." \
+  --request POST \
+  http://127.0.0.1:8200/v1/openstack/rotate-role/:name
+```

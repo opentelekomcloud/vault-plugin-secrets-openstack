@@ -54,6 +54,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 			b.pathStaticRole(),
 			b.pathRotateRoot(),
 			b.pathCreds(),
+			b.pathRotateStaticCreds(),
 			b.pathStaticCreds(),
 		},
 		Secrets: []*framework.Secret{
