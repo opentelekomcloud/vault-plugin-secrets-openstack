@@ -534,6 +534,6 @@ func fillExpectedStaticRoleDefaultFields(b *backend, entry *roleStaticEntry) {
 
 func fillActualStaticRoleDefaultFields(entry *roleStaticEntry) {
 	entry.Secret = ""
-	entry.UserId = ""
+	entry.UserID = ""
 	entry.TTL = 0
 }
