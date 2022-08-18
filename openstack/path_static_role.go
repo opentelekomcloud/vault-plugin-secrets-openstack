@@ -65,11 +65,21 @@ func (b *backend) pathStaticRole() *framework.Path {
 				Description: "Specifies the duration of static role password rotation.",
 				Default:     "1h",
 			},
+			"ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Internal field which specifies the remaining time for the next password rotation.",
+				Default:     "1h",
+			},
 			"secret_type": {
 				Type:          framework.TypeLowerCaseString,
 				Description:   "Specifies what kind of secret will configuration contain.",
 				AllowedValues: []interface{}{"token", "password"},
 				Default:       SecretToken,
+			},
+			"secret": {
+				Type: framework.TypeString,
+				Description: "Internal field for Openstack user password which will be rotated " +
+					"upon static role creation.",
 			},
 			"username": {
 				Type:        framework.TypeNameString,
