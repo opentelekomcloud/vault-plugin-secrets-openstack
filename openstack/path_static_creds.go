@@ -10,11 +10,19 @@ import (
 )
 
 const (
-	pathStaticCreds = "static-creds"
+	pathStaticCreds       = "static-creds"
+	pathStaticCredsRotate = "rotate-role"
 
 	staticCredsHelpSyn  = "Manage the Openstack static credentials with static roles."
 	staticCredsHelpDesc = `
 This path allows you to read OpenStack secret stored by predefined static roles.
+`
+
+	rotateStaticHelpSyn  = "Rotate static role password."
+	rotateStaticHelpDesc = `
+Rotate the static role user credentials.
+
+Once this method is called, static role will now be the only entity that knows the static user password.
 `
 )
 
@@ -35,6 +43,29 @@ func (b *backend) pathStaticCreds() *framework.Path {
 		},
 		HelpSynopsis:    staticCredsHelpSyn,
 		HelpDescription: staticCredsHelpDesc,
+	}
+}
+
+func (b *backend) pathRotateStaticCreds() *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("%s/%s", pathStaticCredsRotate, framework.GenericNameRegex("role")),
+		Fields: map[string]*framework.FieldSchema{
+			"role": {
+				Type:        framework.TypeString,
+				Required:    true,
+				Description: "Specifies name of the static role which credentials will be rotated.",
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.rotateStaticCreds,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.rotateStaticCreds,
+			},
+		},
+		HelpSynopsis:    rotateStaticHelpSyn,
+		HelpDescription: rotateStaticHelpDesc,
 	}
 }
 
@@ -110,6 +141,45 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	}
 
 	return &logical.Response{Data: data}, nil
+}
+
+func (b *backend) rotateStaticCreds(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roleName := d.Get("role").(string)
+	role, err := getStaticRoleByName(ctx, roleName, r)
+	if err != nil {
+		return nil, err
+	}
+
+	sharedCloud := b.getSharedCloud(role.Cloud)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := sharedCloud.getClient(ctx, r.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	newPassword, err := Passwords{}.Generate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = users.ChangePassword(client, role.UserID, users.ChangePasswordOpts{
+		Password:         newPassword,
+		OriginalPassword: role.Secret,
+	}).ExtractErr()
+	if err != nil {
+		return nil, err
+	}
+
+	role.Secret = newPassword
+
+	if err := saveStaticRole(ctx, role, r); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func getScopeFromStaticRole(role *roleStaticEntry) tokens.Scope {

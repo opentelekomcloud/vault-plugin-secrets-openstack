@@ -106,6 +106,14 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			assertStatusCode(t, http.StatusOK, resp)
 
 			resp, err = p.vaultDo(
+				http.MethodPost,
+				staticRotateCredsURL(roleName),
+				nil,
+			)
+			require.NoError(t, err)
+			assertStatusCode(t, http.StatusNoContent, resp)
+
+			resp, err = p.vaultDo(
 				http.MethodDelete,
 				staticRoleURL(roleName),
 				nil,
@@ -126,6 +134,10 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 
 func staticCredsURL(roleName string) string {
 	return fmt.Sprintf("/v1/openstack/static-creds/%s", roleName)
+}
+
+func staticRotateCredsURL(roleName string) string {
+	return fmt.Sprintf("/v1/openstack/rotate-role/%s", roleName)
 }
 
 func cloudToStaticRoleMap(data testStaticCase) map[string]interface{} {
