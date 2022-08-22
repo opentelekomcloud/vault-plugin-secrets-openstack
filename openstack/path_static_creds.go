@@ -125,7 +125,7 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	case SecretPassword:
 		authResponse := &authStaticResponseData{
 			AuthURL:  cloudConfig.AuthURL,
-			Username: role.Username,
+			Username: user.Name,
 			Password: role.Secret,
 			DomainID: user.DomainID,
 		}
