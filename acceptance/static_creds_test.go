@@ -16,12 +16,13 @@ import (
 )
 
 type testStaticCase struct {
-	cloud      string
-	projectID  string
-	domainID   string
-	secretType string
-	username   string
-	extensions map[string]interface{}
+	cloud       string
+	projectID   string
+	projectName string
+	domainID    string
+	secretType  string
+	username    string
+	extensions  map[string]interface{}
 }
 
 func (p *PluginTest) TestStaticCredsLifecycle() {
@@ -50,12 +51,21 @@ func (p *PluginTest) TestStaticCredsLifecycle() {
 			username:   "static-test-1",
 			secretType: "password",
 		},
-		"user_token": {
+		"user_token_project_id": {
 			cloud:      cloud.Name,
 			projectID:  aux.ProjectID,
-			domainID:   aux.DomainID,
 			username:   "static-test-2",
 			secretType: "token",
+			extensions: map[string]interface{}{
+				"identity_api_version": "3",
+			},
+		},
+		"user_token_project_name": {
+			cloud:       cloud.Name,
+			projectName: "myproject",
+			domainID:    aux.DomainID,
+			username:    "static-test-3",
+			secretType:  "token",
 			extensions: map[string]interface{}{
 				"identity_api_version": "3",
 			},
@@ -142,12 +152,13 @@ func staticRotateCredsURL(roleName string) string {
 
 func cloudToStaticRoleMap(data testStaticCase) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
-		"cloud":       data.cloud,
-		"project_id":  data.projectID,
-		"domain_id":   data.domainID,
-		"secret_type": data.secretType,
-		"username":    data.username,
-		"extensions":  data.extensions,
+		"cloud":        data.cloud,
+		"project_id":   data.projectID,
+		"project_name": data.projectName,
+		"domain_id":    data.domainID,
+		"secret_type":  data.secretType,
+		"username":     data.username,
+		"extensions":   data.extensions,
 	})
 }
 

@@ -87,13 +87,18 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 		return nil, err
 	}
 
+	user, err := users.Get(client, role.UserID).Extract()
+	if err != nil {
+		return nil, err
+	}
+
 	var data map[string]interface{}
 	switch r := role.SecretType; r {
 	case SecretToken:
 		tokenOpts := &tokens.AuthOptions{
-			Username: role.Username,
+			Username: user.Name,
 			Password: role.Secret,
-			DomainID: role.DomainID,
+			DomainID: user.DomainID,
 			Scope:    getScopeFromStaticRole(role),
 		}
 
@@ -106,7 +111,7 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 			AuthURL:  cloudConfig.AuthURL,
 			Username: role.Username,
 			Token:    token.ID,
-			DomainID: role.DomainID,
+			DomainID: user.DomainID,
 		}
 
 		data = map[string]interface{}{
@@ -122,7 +127,7 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 			AuthURL:  cloudConfig.AuthURL,
 			Username: role.Username,
 			Password: role.Secret,
-			DomainID: role.DomainID,
+			DomainID: user.DomainID,
 		}
 		data = map[string]interface{}{
 			"auth": formStaticAuthResponse(
