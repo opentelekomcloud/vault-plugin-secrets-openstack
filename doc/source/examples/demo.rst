@@ -53,13 +53,13 @@ perform invoke Terraform to query image_id for the image by name.
 
   .. code-block::
 
-     $ vault write openstack/cloud/demo auth_url=https://<AUTH_URL> username=<USER> password=<PASSWORD> user_domain_name=<USER_DOMAIN_NAME> password_policy=os-policy
+     $ vault write openstack/clouds/demo auth_url=https://<AUTH_URL> username=<USER> password=<PASSWORD> user_domain_name=<USER_DOMAIN_NAME> password_policy=os-policy
 
 - Configure root token role
 
   .. code-block:: console
 
-     $ vault write /openstack/role/root_token cloud=demo project_name=<PROJECT_NAME> domain_name=<DOMAIN_NAME> root=true
+     $ vault write /openstack/roles/root_token cloud=demo project_name=<PROJECT_NAME> domain_name=<DOMAIN_NAME> root=true
 
 - Prepare Terraform configuration
 
