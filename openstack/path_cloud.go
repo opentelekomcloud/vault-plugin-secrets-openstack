@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	pathCloud         = "cloud"
+	pathCloud         = "clouds"
 	pathClouds        = "clouds/?"
 	cloudsStoragePath = "clouds"
 

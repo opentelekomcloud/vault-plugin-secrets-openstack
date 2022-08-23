@@ -101,5 +101,5 @@ func (p *PluginTest) TestCloudLifecycle() {
 var cloudsListURL = "/v1/openstack/clouds"
 
 func cloudURL(name string) string {
-	return fmt.Sprintf("/v1/openstack/cloud/%s", name)
+	return fmt.Sprintf("/v1/openstack/clouds/%s", name)
 }

@@ -170,12 +170,9 @@ func (b *backend) rotateStaticCreds(ctx context.Context, r *logical.Request, d *
 		return nil, err
 	}
 
-	err = users.ChangePassword(client, role.UserID, users.ChangePasswordOpts{
-		Password:         newPassword,
-		OriginalPassword: role.Secret,
-	}).ExtractErr()
+	_, err = users.Update(client, role.UserID, users.UpdateOpts{Password: newPassword}).Extract()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error rotating user password for user `%s`: %s", role.Username, err)
 	}
 
 	role.Secret = newPassword

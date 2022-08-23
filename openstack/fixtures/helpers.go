@@ -332,28 +332,25 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 		})
 	}
 
-	if enabled.UserGet {
-		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
-			th.TestMethod(t, r, "GET")
+	th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "PATCH":
+			if enabled.UserPatch {
+				handleUpdateUser(t, w, r, userID)
+			}
+		case "GET":
+			if enabled.UserGet {
+				handleGetUser(t, w, r, userID)
+			}
+		case "DELETE":
+			if enabled.UserDelete {
+				th.TestHeader(t, r, "Accept", "application/json")
+				th.TestMethod(t, r, "DELETE")
 
-			handleGetUser(t, w, r, userID)
-		})
-	}
-
-	if enabled.UserPatch {
-		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
-			th.TestMethod(t, r, "PATCH")
-
-			handleUpdateUser(t, w, r, userID)
-		})
-	}
-
-	if enabled.UserDelete {
-		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
-			th.TestHeader(t, r, "Accept", "application/json")
-			th.TestMethod(t, r, "DELETE")
-
-			w.WriteHeader(http.StatusNoContent)
-		})
-	}
+				w.WriteHeader(http.StatusNoContent)
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	})
 }
