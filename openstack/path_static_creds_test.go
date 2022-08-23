@@ -30,6 +30,7 @@ func TestStaticCredentialsRead_ok(t *testing.T) {
 		TokenPost: true,
 		TokenGet:  true,
 		UserList:  true,
+		UserGet:   true,
 	})
 
 	testClient := thClient.ServiceClient()
@@ -49,7 +50,7 @@ func TestStaticCredentialsRead_ok(t *testing.T) {
 	t.Run("user_token", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomStaticRole(t, s, projectName, "token", secret, "")
+		roleName := createSaveRandomStaticRole(t, s, projectName, "token", secret, userID)
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -62,7 +63,7 @@ func TestStaticCredentialsRead_ok(t *testing.T) {
 	t.Run("user_password", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
-		roleName := createSaveRandomStaticRole(t, s, projectName, "password", secret, "")
+		roleName := createSaveRandomStaticRole(t, s, projectName, "password", secret, userID)
 
 		res, err := b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.ReadOperation,
@@ -159,6 +160,7 @@ func TestRotateStaticCredentials_ok(t *testing.T) {
 		TokenPost:      true,
 		TokenGet:       true,
 		PasswordChange: true,
+		UserGet:        true,
 	})
 
 	testClient := thClient.ServiceClient()

@@ -163,6 +163,32 @@ func handleUpdateUser(t *testing.T, w http.ResponseWriter, r *http.Request, user
 `, userID)
 }
 
+func handleGetUser(t *testing.T, w http.ResponseWriter, r *http.Request, userID string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "GET")
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `
+{
+    "user": {
+        "default_project_id": "project",
+        "description": "James Doe user",
+        "domain_id": "domain",
+        "email": "jdoe@example.com",
+        "enabled": true,
+        "id": "%s",
+        "links": {
+            "self": "https://example.com/identity/v3/users/29148f9awu90f1u2"
+        },
+        "name": "James Doe",
+        "password_expires_at": "2016-11-06T15:32:17.000000"
+    }
+}
+`, userID)
+}
+
 func handleListUsers(t *testing.T, w http.ResponseWriter, r *http.Request, userID string, userName string) {
 	t.Helper()
 
@@ -242,6 +268,7 @@ type EnabledMocks struct {
 	UserPatch      bool
 	UserList       bool
 	UserDelete     bool
+	UserGet        bool
 }
 
 func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled EnabledMocks) {
@@ -302,6 +329,14 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 			th.TestMethod(t, r, "POST")
 
 			w.WriteHeader(http.StatusNoContent)
+		})
+	}
+
+	if enabled.UserGet {
+		th.Mux.HandleFunc(fmt.Sprintf("/v3/users/%s", userID), func(w http.ResponseWriter, r *http.Request) {
+			th.TestMethod(t, r, "GET")
+
+			handleGetUser(t, w, r, userID)
 		})
 	}
 
