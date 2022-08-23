@@ -5,7 +5,7 @@ resource "vault_generic_secret" "os_policy" {
 }
 
 resource "vault_generic_secret" "os_root" {
-  path = "openstack/cloud/os_root"
+  path = "openstack/clouds/os_root"
 
   data_json = file("${path.cwd}/vault_data/os_root.json")
 
@@ -15,7 +15,7 @@ resource "vault_generic_secret" "os_root" {
 }
 
 resource "vault_generic_secret" "tmp_user_token" {
-  path = "openstack/role/tmp_user_token"
+  path = "openstack/roles/tmp_user_token"
 
   data_json = file("${path.cwd}/vault_data/tmp_user_token.json")
 
@@ -25,7 +25,7 @@ resource "vault_generic_secret" "tmp_user_token" {
 }
 
 resource "vault_generic_secret" "root_token" {
-  path = "openstack/role/root_token"
+  path = "openstack/roles/root_token"
 
   data_json = file("${path.cwd}/vault_data/root_token.json")
 
