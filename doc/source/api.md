@@ -7,10 +7,10 @@
 This endpoint configures the root credentials to communicate with OpenStack instance. If credentials already exist, this
 will overwrite them.
 
-| Method | Path                      |
-|:-------|:--------------------------|
-| `POST` | `/openstack/cloud/:cloud` |
-| `PUT`  | `/openstack/cloud/:cloud` |
+| Method | Path                       |
+|:-------|:---------------------------|
+| `POST` | `/openstack/clouds/:cloud` |
+| `PUT`  | `/openstack/clouds/:cloud` |
 
 ### Parameters
 
@@ -50,7 +50,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/cloud/example-cloud
+    http://127.0.0.1:8200/v1/openstack/clouds/example-cloud
 ```
 
 ## Read Root Configuration
@@ -58,16 +58,16 @@ $ curl \
 This endpoint allows you to read non-secure values that have been set in the `cloud/:cloud` endpoint.
 In particular, the `password` parameter is never returned.
 
-| Method | Path                      |
-|:-------|:--------------------------|
-| `GET`  | `/openstack/cloud/:cloud` |
+| Method | Path                       |
+|:-------|:---------------------------|
+| `GET`  | `/openstack/clouds/:cloud` |
 
 ### Sample Request
 
 ```shell
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/cloud/example-cloud
+    http://127.0.0.1:8200/v1/openstack/clouds/example-cloud
 ```
 
 ### Sample Response
@@ -138,10 +138,10 @@ $ curl \
 This endpoint creates or updates the role with the given `name`. If a role with the name does not exist, it will be
 created. If the role exists, it will be updated with the new attributes.
 
-| Method | Path                    |
-|:-------|:------------------------|
-| `POST` | `/openstack/role/:name` |
-| `PUT`  | `/openstack/role/:name` |
+| Method | Path                     |
+|:-------|:-------------------------|
+| `POST` | `/openstack/roles/:name` |
+| `PUT`  | `/openstack/roles/:name` |
 
 ### Parameters
 
@@ -194,7 +194,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/role/example-role
+    http://127.0.0.1:8200/v1/openstack/roles/example-role
 ```
 
 ### Sample Payload
@@ -274,9 +274,9 @@ or
 
 This endpoint queries an existing role by the given name. If the role does not exist, a 404 is returned.
 
-| Method   | Path                    |
-|:---------|:------------------------|
-| `GET`    | `/openstack/role/:name` |
+| Method   | Path                     |
+|:---------|:-------------------------|
+| `GET`    | `/openstack/roles/:name` |
 
 ### Parameters
 
@@ -287,7 +287,7 @@ This endpoint queries an existing role by the given name. If the role does not e
 ```shell
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/openstack/role/example-role
+    http://127.0.0.1:8200/v1/openstack/roles/example-role
 ```
 
 ### Sample Response
@@ -427,10 +427,10 @@ $ curl \
 This endpoint creates or updates the static role with the given `name`. If a role with the name does not exist, it will be
 created. If the role exists, it will be updated with the new attributes.
 
-| Method | Path                           |
-|:-------|:-------------------------------|
-| `POST` | `/openstack/static-role/:name` |
-| `PUT`  | `/openstack/static-role/:name` |
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `POST` | `/openstack/static-roles/:name` |
+| `PUT`  | `/openstack/static-roles/:name` |
 
 ### Parameters
 
@@ -473,7 +473,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/openstack/static-role/example-role
+    http://127.0.0.1:8200/v1/openstack/static-roles/example-role
 ```
 
 ### Sample Payload

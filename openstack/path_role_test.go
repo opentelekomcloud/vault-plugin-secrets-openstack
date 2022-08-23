@@ -17,7 +17,7 @@ import (
 )
 
 func rolePath(name string) string {
-	return fmt.Sprintf("%s/%s", "role", name)
+	return fmt.Sprintf("%s/%s", "roles", name)
 }
 
 func TestRoleStoragePath(t *testing.T) {

@@ -130,7 +130,7 @@ func (p *PluginTest) TestStaticRoleLifecycle() {
 }
 
 func staticRoleURL(name string) string {
-	return fmt.Sprintf("/v1/openstack/static-role/%s", name)
+	return fmt.Sprintf("/v1/openstack/static-roles/%s", name)
 }
 
 func expectedStaticRoleData(cloudName string, aux *AuxiliaryData) map[string]interface{} {

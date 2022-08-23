@@ -61,7 +61,7 @@ var (
 	pluginMountEndpoint     = fmt.Sprintf("/v1/sys/mounts/%s", pluginAlias)
 	pluginPwdPolicyEndpoint = fmt.Sprintf("/v1/sys/policies/password/%s", policyAlias)
 
-	cloudBaseEndpoint = fmt.Sprintf("/v1/%s/cloud", pluginAlias)
+	cloudBaseEndpoint = fmt.Sprintf("/v1/%s/clouds", pluginAlias)
 )
 
 type vaultCfg struct {

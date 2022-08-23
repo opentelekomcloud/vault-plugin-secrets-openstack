@@ -22,7 +22,7 @@ which are used to control permissions to OpenStack resources.
 )
 
 var (
-	staticPathRole = fmt.Sprintf("static-role/%s", framework.GenericNameRegex("name"))
+	staticPathRole = fmt.Sprintf("static-roles/%s", framework.GenericNameRegex("name"))
 )
 
 func (b *backend) pathStaticRoles() *framework.Path {

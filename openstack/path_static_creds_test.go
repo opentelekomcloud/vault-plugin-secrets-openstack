@@ -157,10 +157,9 @@ func TestRotateStaticCredentials_ok(t *testing.T) {
 	projectName := tools.RandomString("p", 5)
 
 	fixtures.SetupKeystoneMock(t, userID, projectName, fixtures.EnabledMocks{
-		TokenPost:      true,
-		TokenGet:       true,
-		PasswordChange: true,
-		UserGet:        true,
+		TokenPost: true,
+		TokenGet:  true,
+		UserPatch: true,
 	})
 
 	testClient := thClient.ServiceClient()
@@ -194,13 +193,12 @@ func TestRotateStaticCredentials_ok(t *testing.T) {
 
 		roleName := createSaveRandomStaticRole(t, s, projectName, "password", secret, userID)
 
-		res, err := b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      credsStaticPath(roleName),
+		_, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      rotateStaticCreds(roleName),
 			Storage:   s,
 		})
 		require.NoError(t, err)
-		require.NotEmpty(t, res.Data)
 	})
 }
 

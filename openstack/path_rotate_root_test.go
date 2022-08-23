@@ -43,8 +43,6 @@ func TestRotateRootCredentials_ok(t *testing.T) {
 }
 
 func TestRotateRootCredentials_error(t *testing.T) {
-	t.Parallel()
-
 	t.Run("read-fail", func(t *testing.T) {
 		userID, _ := uuid.GenerateUUID()
 		projectName := tools.RandomString("p", 5)

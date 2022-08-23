@@ -29,7 +29,7 @@ which are used to control permissions to OpenStack resources.
 )
 
 var (
-	pathRole = fmt.Sprintf("role/%s", framework.GenericNameRegex("name"))
+	pathRole = fmt.Sprintf("roles/%s", framework.GenericNameRegex("name"))
 
 	errRoleGet = errors.New("error searching for the role")
 )
