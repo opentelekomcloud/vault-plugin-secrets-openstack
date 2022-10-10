@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	"sync"
 	"time"
 
@@ -115,17 +116,38 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("no cloud found with name %s", c.name)
 	}
 
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: cloud.AuthURL,
-		Username:         cloud.Username,
-		Password:         cloud.Password,
-		DomainName:       cloud.UserDomainName,
-		Scope: &gophercloud.AuthScope{
-			DomainName: cloud.UserDomainName,
+	//opts := gophercloud.AuthOptions{
+	//	IdentityEndpoint:  cloud.AuthURL,
+	//	Username:          cloud.Username,
+	//	Password:          cloud.Password,
+	//	DomainName:        cloud.UserDomainName,
+	//	ProjectDomainID:   cloud.ProjectDomainID,
+	//	ProjectDomainName: cloud.ProjectDomainName,
+	//	Scope: &gophercloud.AuthScope{
+	//		DomainName: cloud.UserDomainName,
+	//	},
+	//}
+	opts := &clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:           cloud.AuthURL,
+			Username:          cloud.Username,
+			Password:          cloud.Password,
+			DomainName:        cloud.UserDomainName,
+			ProjectDomainID:   cloud.ProjectDomainID,
+			ProjectDomainName: cloud.ProjectDomainName,
 		},
 	}
 
-	pClient, err := openstack.AuthenticatedClient(opts)
+	authOpts, err := clientconfig.AuthOptions(opts)
+	if err != nil {
+		return fmt.Errorf("error creating provider auth opts: %w", err)
+	}
+	authOpts.AllowReauth = true
+	authOpts.Scope = &gophercloud.AuthScope{
+		DomainName: cloud.UserDomainName,
+	}
+
+	pClient, err := openstack.AuthenticatedClient(*authOpts)
 	if err != nil {
 		return fmt.Errorf("error creating provider client: %w", err)
 	}
@@ -148,11 +170,13 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 }
 
 type OsCloud struct {
-	Name             string `json:"name"`
-	AuthURL          string `json:"auth_url"`
-	UserDomainName   string `json:"user_domain_name"`
-	Username         string `json:"username"`
-	Password         string `json:"password"`
-	UsernameTemplate string `json:"username_template"`
-	PasswordPolicy   string `json:"password_policy"`
+	Name              string `json:"name"`
+	AuthURL           string `json:"auth_url"`
+	UserDomainName    string `json:"user_domain_name"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+	UsernameTemplate  string `json:"username_template"`
+	PasswordPolicy    string `json:"password_policy"`
+	ProjectDomainID   string `json:"project_domain_id"`
+	ProjectDomainName string `json:"project_domain_name"`
 }
