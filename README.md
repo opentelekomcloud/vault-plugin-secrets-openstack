@@ -62,8 +62,8 @@ You must have a Vault server already running, unsealed, and authenticated.
 1. Firstly you have to define an admin credentials in a cloud.
 
    ```sh
-   $ vault write /openstack/cloud/example-cloud auth_url=https://127.0.0.1/v3/ username=admin password=admin user_domain_name=mydomain
-   Success! Data written to: openstack/cloud/example-cloud
+   $ vault write /openstack/clouds/example-cloud auth_url=https://127.0.0.1/v3/ username=admin password=admin user_domain_name=mydomain
+   Success! Data written to: openstack/clouds/example-cloud
    ```
 
    > **_NOTE:_** In the `cloud` you can specify additional parameters such as [`username_template`](https://www.vaultproject.io/docs/concepts/username-templating) 
@@ -72,8 +72,8 @@ You must have a Vault server already running, unsealed, and authenticated.
 1. After that you need to create a role for the cloud.
 
    ```sh
-   $ vault write /openstack/role/example-role cloud=example-cloud project_name=myproject domain_name=mydomain user_roles="member" root=false
-   Success! Data written to: openstack/role/example-role
+   $ vault write /openstack/roles/example-role cloud=example-cloud project_name=myproject domain_name=mydomain user_roles="member" root=false
+   Success! Data written to: openstack/roles/example-role
    ```
 
 1. Now you can easily create a temporary user/token pair.
