@@ -400,7 +400,7 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 		}
 	})
 
-	th.Mux.HandleFunc(fmt.Sprintf("/v3/groups"), func(w http.ResponseWriter, r *http.Request) {
+	th.Mux.HandleFunc("/v3/groups", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
 			if enabled.GroupList {
