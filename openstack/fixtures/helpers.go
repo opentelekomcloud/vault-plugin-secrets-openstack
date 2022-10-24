@@ -222,6 +222,51 @@ func handleListUsers(t *testing.T, w http.ResponseWriter, r *http.Request, userI
 `, userID, userName)
 }
 
+func handleListGroups(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "GET")
+
+	w.Header().Add("Content-Type", "application/json")
+
+	_, _ = fmt.Fprintf(w, `
+{
+    "groups": [
+        {
+            "domain_id": "698f9bf85ca9437a9b2f41132ab3aa0e",
+            "create_time": 1663793877134,
+            "name": "default",
+            "description": "default group",
+            "links": {
+                "next": null,
+                "previous": null,
+                "self": "https://example.com/v3/groups/2d54491f3a8447639d02184ef33ea8b6"
+            },
+            "id": "2d54491f3a8447639d02184ef33ea8b6"
+        },
+        {
+            "domain_id": "698f9bf85ca9437a9b2f41132ab3aa0e",
+            "create_time": 1663792847545,
+            "name": "testing",
+            "description": "test-group",
+            "links": {
+                "next": null,
+                "previous": null,
+                "self": "https://example.com/v3/groups/c45a98d539524c1e92198d37089e6872"
+            },
+            "id": "c45a98d539524c1e92198d37089e6872"
+        }
+    ],
+    "links": {
+        "next": null,
+        "previous": null,
+        "self": "https://example.com/v3/groups"
+    }
+}
+`)
+}
+
 func handleProjectList(t *testing.T, w http.ResponseWriter, r *http.Request, projectName string) {
 	t.Helper()
 
@@ -269,6 +314,7 @@ type EnabledMocks struct {
 	UserList       bool
 	UserDelete     bool
 	UserGet        bool
+	GroupList      bool
 }
 
 func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled EnabledMocks) {
@@ -348,6 +394,17 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 				th.TestMethod(t, r, "DELETE")
 
 				w.WriteHeader(http.StatusNoContent)
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	})
+
+	th.Mux.HandleFunc(fmt.Sprintf("/v3/groups"), func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			if enabled.GroupList {
+				handleListGroups(t, w, r)
 			}
 		default:
 			w.WriteHeader(404)

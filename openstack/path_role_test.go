@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"regexp"
 	"testing"
 	"time"
@@ -113,7 +114,6 @@ func TestRoleGet(t *testing.T) {
 }
 
 func TestRoleExistence(t *testing.T) {
-	t.Parallel()
 
 	t.Run("existing", func(t *testing.T) {
 		t.Parallel()
@@ -313,7 +313,6 @@ func TestRoleDelete(t *testing.T) {
 }
 
 func TestRoleCreate(t *testing.T) {
-	t.Parallel()
 
 	id, _ := uuid.GenerateUUID()
 	t.Run("ok", func(t *testing.T) {
@@ -363,7 +362,6 @@ func TestRoleCreate(t *testing.T) {
 		for name, data := range cases {
 			t.Run(name, func(t *testing.T) {
 				data := data
-				t.Parallel()
 
 				roleName := data.Name
 				inputRole := fixtures.SanitizedMap(roleToMap(data))
@@ -493,12 +491,20 @@ func TestRoleCreate(t *testing.T) {
 func preCreateCloud(t *testing.T, s logical.Storage) string {
 	t.Helper()
 
+	userID, _ := uuid.GenerateUUID()
+	fixtures.SetupKeystoneMock(t, userID, "", fixtures.EnabledMocks{
+		TokenPost: true,
+		TokenGet:  true,
+		GroupList: true,
+	})
+
 	name := randomRoleName()
 	cloudStoragePath := storageCloudKey(name)
-
+	testClient := thClient.ServiceClient()
+	authURL := testClient.Endpoint + "v3"
 	entry, err := logical.StorageEntryJSON(cloudStoragePath, &OsCloud{
 		Name:           testCloudName,
-		AuthURL:        testAuthURL,
+		AuthURL:        authURL,
 		UserDomainName: testUserDomainName,
 		Username:       testUsername,
 		Password:       testPassword1,
@@ -513,7 +519,6 @@ func preCreateCloud(t *testing.T, s logical.Storage) string {
 }
 
 func TestRoleUpdate(t *testing.T) {
-	t.Parallel()
 
 	b, s := testBackend(t)
 	cloudName := preCreateCloud(t, s)
