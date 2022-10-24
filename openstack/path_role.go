@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 	"time"
 
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -239,7 +243,9 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse("cloud is required when creating a role"), nil
 		}
 	}
-	cld, err := b.getSharedCloud(cloudName).getCloudConfig(ctx, req.Storage)
+
+	cloud := b.getSharedCloud(cloudName)
+	cld, err := cloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -305,18 +311,61 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.Extensions = ext.(map[string]string)
 	}
 
-	if groups, ok := d.GetOk("user_groups"); ok {
+	if userGroups, ok := d.GetOk("user_groups"); ok {
 		if entry.Root {
 			return logical.ErrorResponse(errInvalidForRoot, "user groups"), nil
 		}
-		entry.UserGroups = groups.([]string)
+		client, err := cloud.getClient(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		token := tokens.Get(client, client.Token())
+		user, err := token.ExtractUser()
+		if err != nil {
+			return nil, fmt.Errorf("error extracting the user from token: %w", err)
+		}
+
+		groupPages, err := groups.List(client, groups.ListOpts{
+			DomainID: user.Domain.ID,
+		}).AllPages()
+		if err != nil {
+			return nil, err
+		}
+
+		groupList, err := groups.ExtractGroups(groupPages)
+		if err != nil {
+			return nil, err
+		}
+
+		if v := common.CheckGroupSlices(groupList, userGroups.([]string)); len(v) > 0 {
+			return nil, fmt.Errorf("group %v doesn't exist", v)
+		}
+		entry.UserGroups = userGroups.([]string)
 	}
 
-	if roles, ok := d.GetOk("user_roles"); ok {
+	if userRoles, ok := d.GetOk("user_roles"); ok {
 		if entry.Root {
 			return logical.ErrorResponse(errInvalidForRoot, "user roles"), nil
 		}
-		entry.UserRoles = roles.([]string)
+		client, err := cloud.getClient(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+		rolePages, err := roles.List(client, nil).AllPages()
+		if err != nil {
+			return nil, fmt.Errorf("unable to query roles: %w", err)
+		}
+
+		roleList, err := roles.ExtractRoles(rolePages)
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve roles: %w", err)
+		}
+
+		if v := common.CheckRolesSlices(roleList, userRoles.([]string)); len(v) > 0 {
+			return nil, fmt.Errorf("role %v doesn't exist", v)
+		}
+		entry.UserRoles = userRoles.([]string)
 	}
 
 	if err := saveRole(ctx, entry, req.Storage); err != nil {
@@ -342,7 +391,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List(ctx, rolesStoragePath+"/")
+	rolesList, err := req.Storage.List(ctx, rolesStoragePath+"/")
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +399,7 @@ func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *fr
 	// filter by cloud
 	if cloud, ok := d.GetOk("cloud"); ok {
 		var refinedRoles []string
-		for _, name := range roles {
+		for _, name := range rolesList {
 			role, err := getRoleByName(ctx, name, req.Storage)
 			if err != nil {
 				return nil, err
@@ -360,8 +409,8 @@ func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *fr
 			}
 			refinedRoles = append(refinedRoles, name)
 		}
-		roles = refinedRoles
+		rolesList = refinedRoles
 	}
 
-	return logical.ListResponse(roles), nil
+	return logical.ListResponse(rolesList), nil
 }
