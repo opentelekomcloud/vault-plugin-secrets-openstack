@@ -162,10 +162,10 @@ created. If the role exists, it will be updated with the new attributes.
   Valid choices are `token` and `password`.
 
 - `user_groups` `(list: [])` - Specifies list of existing OpenStack groups this Vault role is allowed to assume.
-  This is a comma-separated string or JSON array.
+  This is a comma-separated string or JSON array. If provided `user_groups` don't exist an error will be raised.
 
 - `user_roles` `(list: [])` - Specifies list of existing OpenStack roles this Vault role is allowed to assume.
-  This is a comma-separated string or JSON array.
+  This is a comma-separated string or JSON array. If provided `user_roles` don't exist an error will be raised.
 
 - `project_id` `(string: <optional>)` - Create a project-scoped role with given project ID. Mutually exclusive with
   `project_name`.

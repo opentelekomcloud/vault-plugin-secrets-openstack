@@ -245,11 +245,11 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	cloud := b.getSharedCloud(cloudName)
-	cld, err := cloud.getCloudConfig(ctx, req.Storage)
+	cloudConf, err := cloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if cld == nil {
+	if cloudConf == nil {
 		return logical.ErrorResponse("cloud `%s` doesn't exist", cloudName), nil
 	}
 
