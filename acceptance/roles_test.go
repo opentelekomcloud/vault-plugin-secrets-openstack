@@ -11,7 +11,6 @@ import (
 
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,18 +41,19 @@ func extractRoleData(t *testing.T, resp *http.Response) *roleData {
 func (p *PluginTest) TestRoleLifecycle() {
 	t := p.T()
 
-	cloud := &openstack.OsCloud{
-		Name:             openstack.RandomString(openstack.NameDefaultSet, 10),
-		AuthURL:          "https://example.com/v3",
-		UserDomainName:   openstack.RandomString(openstack.NameDefaultSet, 10),
-		Username:         openstack.RandomString(openstack.NameDefaultSet, 10),
-		Password:         openstack.RandomString(openstack.PwdDefaultSet, 10),
-		UsernameTemplate: "u-{{ .RoleName }}-{{ random 4 }}",
-	}
-	p.makeCloud(cloud)
+	cloud := openstackCloudConfig(t)
+	require.NotEmpty(t, cloud)
 
 	data := expectedRoleData(cloud.Name)
 	roleName := "test-write"
+
+	resp, err := p.vaultDo(
+		http.MethodPost,
+		cloudURL(cloudName),
+		cloudToCloudMap(cloud),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, readJSONResponse(t, resp))
 
 	t.Run("WriteRole", func(t *testing.T) {
 		resp, err := p.vaultDo(
@@ -108,6 +108,14 @@ func (p *PluginTest) TestRoleLifecycle() {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
+
+	resp, err = p.vaultDo(
+		http.MethodDelete,
+		cloudURL(cloudName),
+		nil,
+	)
+	require.NoError(t, err)
+	assertStatusCode(t, http.StatusNoContent, resp)
 }
 
 func roleURL(name string) string {
