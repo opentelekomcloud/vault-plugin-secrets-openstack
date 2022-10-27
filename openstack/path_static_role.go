@@ -207,7 +207,7 @@ func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := getStaticRole(ctx, d, req)
 	if err != nil {
-		return nil, errRoleGet
+		return nil, logical.CodedError(500, errRoleGet)
 	}
 	if entry == nil {
 		return logical.ErrorResponse("static role not found"), nil
