@@ -1,6 +1,8 @@
 package common
 
 import (
+	"fmt"
+	golangsdk "github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 )
@@ -34,4 +36,11 @@ func sliceSubtraction(a, b []string) (diff []string) {
 		}
 	}
 	return
+}
+
+func LogHttpError(err error) error {
+	if httpErr, ok := err.(golangsdk.ErrUnexpectedResponseCode); ok {
+		return fmt.Errorf("response: %s\n %s", httpErr.Error(), httpErr.Body)
+	}
+	return err
 }
