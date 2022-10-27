@@ -319,7 +319,8 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 		client, err := cloud.getClient(ctx, req.Storage)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusUnauthorized, err.Error())
+			errMessage := common.LogHttpError(err)
+			return nil, logical.CodedError(http.StatusUnauthorized, errMessage.Error())
 		}
 
 		token := tokens.Get(client, client.Token())
@@ -352,7 +353,8 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 		client, err := cloud.getClient(ctx, req.Storage)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusUnauthorized, err.Error())
+			errMessage := common.LogHttpError(err)
+			return nil, logical.CodedError(http.StatusUnauthorized, errMessage.Error())
 		}
 		rolePages, err := roles.List(client, nil).AllPages()
 		if err != nil {
