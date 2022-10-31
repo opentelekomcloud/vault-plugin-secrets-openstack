@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
+	"net/http"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -102,7 +105,8 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 	token, err := createToken(client, tokenOpts)
 	if err != nil {
-		return nil, err
+		errMessage := common.LogHttpError(err)
+		return nil, logical.CodedError(http.StatusConflict, errMessage.Error())
 	}
 
 	authResponse := &authResponseData{
@@ -145,7 +149,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 	user, err := createUser(client, username, password, opts.Role)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	var data map[string]interface{}
@@ -227,7 +231,7 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 	roleName := d.Get("role").(string)
 	role, err := getRoleByName(ctx, roleName, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrRoleGetName)
 	}
 
 	sharedCloud := b.getSharedCloud(role.Cloud)

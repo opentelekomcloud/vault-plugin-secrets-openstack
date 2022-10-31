@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 	"sync"
 	"time"
 
@@ -127,18 +128,18 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 
 	pClient, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
-		return fmt.Errorf("error creating provider client: %w", err)
+		return fmt.Errorf("error creating provider client: %w", common.LogHttpError(err))
 	}
 
 	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
 	if err != nil {
-		return fmt.Errorf("error creating service client: %w", err)
+		return fmt.Errorf("error creating service client: %w", common.LogHttpError(err))
 	}
 
 	tokenResponse := tokens.Get(sClient, sClient.Token())
 	token, err := tokenResponse.ExtractToken()
 	if err != nil {
-		return err
+		return fmt.Errorf("error extracting token: %w", common.LogHttpError(err))
 	}
 
 	c.expiresAt = token.ExpiresAt
