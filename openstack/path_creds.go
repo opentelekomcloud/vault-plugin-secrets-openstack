@@ -105,8 +105,7 @@ func getRootCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 	token, err := createToken(client, tokenOpts)
 	if err != nil {
-		errMessage := common.LogHttpError(err)
-		return nil, logical.CodedError(http.StatusConflict, errMessage.Error())
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	authResponse := &authResponseData{
@@ -165,7 +164,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 		token, err := createToken(client, tokenOpts)
 		if err != nil {
-			return nil, err
+			return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 		}
 
 		authResponse := &authResponseData{
@@ -237,12 +236,12 @@ func (b *backend) pathCredsRead(ctx context.Context, r *logical.Request, d *fram
 	sharedCloud := b.getSharedCloud(role.Cloud)
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	opts := &credsOpts{
@@ -354,7 +353,8 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 
 	newUser, err := users.Create(client, userCreateOpts).Extract()
 	if err != nil {
-		return nil, fmt.Errorf("error creating a temporary user: %w", err)
+		errorMessage := fmt.Sprintf("error creating a temporary user: %s", common.LogHttpError(err).Error())
+		return nil, logical.CodedError(http.StatusConflict, errorMessage)
 	}
 
 	rolesToAdd, err := filterRoles(client, role.UserRoles)
@@ -389,7 +389,8 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 func createToken(client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (*tokens.Token, error) {
 	token, err := tokens.Create(client, opts).Extract()
 	if err != nil {
-		return nil, fmt.Errorf("error creating a token: %w", err)
+		errorMessage := fmt.Sprintf("error creating a token: %s", common.LogHttpError(err).Error())
+		return nil, logical.CodedError(http.StatusConflict, errorMessage)
 	}
 
 	return token, nil
