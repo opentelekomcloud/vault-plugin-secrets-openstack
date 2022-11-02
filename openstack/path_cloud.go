@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
 )
 
 const (
-	pathCloud         = "clouds"
-	pathClouds        = "clouds/?"
-	cloudsStoragePath = "clouds"
+	pathCloud  = "clouds"
+	pathClouds = "clouds/?"
 
 	pathCloudHelpSyn = `Configure the root credentials for an OpenStack cloud.`
 	pathCloudHelpDes = `
@@ -23,7 +23,7 @@ Configure the root credentials for an OpenStack cloud using the above parameters
 )
 
 func storageCloudKey(name string) string {
-	return fmt.Sprintf("%s/%s", cloudsStoragePath, name)
+	return fmt.Sprintf("%s/%s", pathCloud, name)
 }
 
 func pathCloudKey(name string) string {
@@ -120,7 +120,7 @@ func (b *backend) cloudExistenceCheck(ctx context.Context, r *logical.Request, d
 	cloud := b.getSharedCloud(d.Get("name").(string))
 	cloudCfg, err := cloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf(vars.ErrCloudConf)
 	}
 	return cloudCfg != nil, nil
 }
@@ -148,7 +148,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 
 	cloudConfig, err := sCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 
 	if cloudConfig == nil {
@@ -202,7 +202,7 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 
 	cloudConfig, err := sCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 
 	return &logical.Response{
@@ -227,7 +227,7 @@ func (b *backend) pathCloudDelete(ctx context.Context, r *logical.Request, d *fr
 }
 
 func (b *backend) pathCloudList(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	clouds, err := r.Storage.List(ctx, cloudsStoragePath+"/")
+	clouds, err := r.Storage.List(ctx, pathCloud+"/")
 	if err != nil {
 		return nil, fmt.Errorf("error listing clouds: %w", err)
 	}

@@ -319,8 +319,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 		client, err := cloud.getClient(ctx, req.Storage)
 		if err != nil {
-			errMessage := common.LogHttpError(err)
-			return nil, logical.CodedError(http.StatusUnauthorized, errMessage.Error())
+			return nil, logical.CodedError(http.StatusUnauthorized, common.LogHttpError(err).Error())
 		}
 
 		token := tokens.Get(client, client.Token())
@@ -353,8 +352,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 		client, err := cloud.getClient(ctx, req.Storage)
 		if err != nil {
-			errMessage := common.LogHttpError(err)
-			return nil, logical.CodedError(http.StatusUnauthorized, errMessage.Error())
+			return nil, logical.CodedError(http.StatusUnauthorized, common.LogHttpError(err).Error())
 		}
 		rolePages, err := roles.List(client, nil).AllPages()
 		if err != nil {
@@ -383,7 +381,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 	name := d.Get("name").(string)
 	entry, err := req.Storage.Get(ctx, roleStoragePath(name))
 	if err != nil {
-		return nil, fmt.Errorf("error on role retrieval: %w", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 
 	if entry == nil {
@@ -392,7 +390,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 
 	err = req.Storage.Delete(ctx, roleStoragePath(name))
 	if err != nil {
-		return nil, fmt.Errorf("error on role deletion: %w", err)
+		return nil, fmt.Errorf("error deleting role: %w", err)
 	}
 	return nil, nil
 }
@@ -400,7 +398,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	rolesList, err := req.Storage.List(ctx, rolesStoragePath+"/")
 	if err != nil {
-		return nil, fmt.Errorf("error while listing roles: %w", err)
+		return nil, fmt.Errorf("error listing roles: %w", err)
 	}
 
 	// filter by cloud
