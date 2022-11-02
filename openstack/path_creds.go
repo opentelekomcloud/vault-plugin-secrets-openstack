@@ -148,7 +148,7 @@ func getUserCredentials(client *gophercloud.ServiceClient, opts *credsOpts) (*lo
 
 	user, err := createUser(client, username, password, opts.Role)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
+		return nil, err
 	}
 
 	var data map[string]interface{}
