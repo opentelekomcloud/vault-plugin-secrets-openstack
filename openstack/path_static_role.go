@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -232,7 +233,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 	cloud := b.getSharedCloud(cloudName)
 	cloudConfig, err := cloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 	if cloudConfig == nil {
 		return logical.ErrorResponse("cloud `%s` doesn't exist", cloudName), nil

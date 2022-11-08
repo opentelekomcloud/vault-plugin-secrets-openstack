@@ -277,7 +277,7 @@ func (b *backend) tokenRevoke(ctx context.Context, r *logical.Request, d *framew
 	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	err = tokens.Revoke(client, token).Err
@@ -306,7 +306,7 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	err = users.Delete(client, userID).ExtractErr()
