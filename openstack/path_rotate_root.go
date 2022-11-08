@@ -3,6 +3,10 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
+
+	"net/http"
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
@@ -52,16 +56,16 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 	sharedCloud := b.getSharedCloud(cloudName)
 	client, err := sharedCloud.getClient(ctx, req.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 	user, err := tokens.Get(client, client.Token()).ExtractUser()
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, req.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 
 	newPassword, err := sharedCloud.passwords.Generate(ctx)
@@ -78,7 +82,8 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 		OriginalPassword: cloudConfig.Password,
 	}).ExtractErr()
 	if err != nil {
-		return nil, err
+		errorMessage := fmt.Sprintf("error changing root password: %s", common.LogHttpError(err).Error())
+		return nil, logical.CodedError(http.StatusConflict, errorMessage)
 	}
 	cloudConfig.Password = newPassword
 

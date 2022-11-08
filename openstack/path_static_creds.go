@@ -7,6 +7,9 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
+	"net/http"
 )
 
 const (
@@ -79,17 +82,18 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	sharedCloud := b.getSharedCloud(role.Cloud)
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
 
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	user, err := users.Get(client, role.UserID).Extract()
 	if err != nil {
-		return nil, err
+		errorMessage := fmt.Sprintf("error querying static user: %s", common.LogHttpError(err).Error())
+		return nil, logical.CodedError(http.StatusConflict, errorMessage)
 	}
 
 	var data map[string]interface{}
@@ -162,7 +166,7 @@ func (b *backend) rotateStaticCreds(ctx context.Context, r *logical.Request, d *
 
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())
 	}
 
 	newPassword, err := Passwords{}.Generate(ctx)
@@ -172,7 +176,8 @@ func (b *backend) rotateStaticCreds(ctx context.Context, r *logical.Request, d *
 
 	_, err = users.Update(client, role.UserID, users.UpdateOpts{Password: newPassword}).Extract()
 	if err != nil {
-		return nil, fmt.Errorf("error rotating user password for user `%s`: %s", role.Username, err)
+		errorMessage := fmt.Sprintf("error rotating user password for user `%s`: %s", role.Username, common.LogHttpError(err))
+		return nil, logical.CodedError(http.StatusConflict, errorMessage)
 	}
 
 	role.Secret = newPassword
@@ -256,7 +261,7 @@ func (b *backend) rotateUserPassword(ctx context.Context, req *logical.Request, 
 	var userId string
 	client, err := cloud.getClient(ctx, req.Storage)
 	if err != nil {
-		return userId, err
+		return userId, common.LogHttpError(err)
 	}
 	opts := users.ListOpts{Name: user}
 	allPages, err := users.List(client, opts).AllPages()
@@ -279,7 +284,7 @@ func (b *backend) rotateUserPassword(ctx context.Context, req *logical.Request, 
 
 	_, err = users.Update(client, userId, users.UpdateOpts{Password: password}).Extract()
 	if err != nil {
-		return userId, fmt.Errorf("error rotating user password for user `%s`: %s", user, err)
+		return userId, fmt.Errorf("error rotating user password for user `%s`: %s", user, common.LogHttpError(err))
 	}
 	return userId, nil
 }
