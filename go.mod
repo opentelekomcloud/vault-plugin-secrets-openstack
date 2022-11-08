@@ -3,8 +3,8 @@ module github.com/opentelekomcloud/vault-plugin-secrets-openstack
 go 1.17
 
 require (
-	github.com/gophercloud/gophercloud v0.23.0
-	github.com/gophercloud/utils v0.0.0-20210909165623-d7085207ff6d
+	github.com/gophercloud/gophercloud v1.0.0
+	github.com/gophercloud/utils v0.0.0-20220927104426-4113af8d2663
 	github.com/hashicorp/go-hclog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/vault/api v1.3.0
@@ -51,10 +51,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.41.0 // indirect
