@@ -39,8 +39,33 @@ func sliceSubtraction(a, b []string) (diff []string) {
 }
 
 func LogHttpError(err error) error {
-	if httpErr, ok := err.(golangsdk.ErrUnexpectedResponseCode); ok {
-		return fmt.Errorf("response: %s\n %s", httpErr.Error(), httpErr.Body)
+	switch httpErr := err.(type) {
+	case golangsdk.ErrDefault400:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault401:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault403:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault404:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault405:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault408:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault409:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault429:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault500:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault502:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault503:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrDefault504:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
+	case golangsdk.ErrUnexpectedResponseCode:
+		return fmt.Errorf("%s\n %s", httpErr.Error(), httpErr.Body)
 	}
 	return err
 }
