@@ -179,7 +179,19 @@ created. If the role exists, it will be updated with the new attributes.
 - `domain_name` `(string: <optional>)` - Create a domain-scoped role with given domain name. Mutually exclusive with
   `domain_id`.
 
-When none of `project_name` or `project_id` is set, created role will have a project scope.
+- `user_project_id` `(string: <optional>)` - Specifies project where user will be created with given project id. 
+  Mutually exclusive with `user_project_name`.
+
+- `user_project_name` `(string: <optional>)` - Specifies project where user will be created with given project name.
+  Mutually exclusive with `user_project_id`.
+
+- `project_domain_id` `(string: <optional>)` - Specifies domain for project-scoped role with given domain id. 
+  Mutually exclusive with `project_domain_name`.
+
+- `project_domain_name` `(string: <optional>)` - Specifies domain for project-scoped role with given domain name. 
+  Mutually exclusive with `project_domain_id`.
+
+When one of `project_name` or `project_id` is set, created role will have a project scope.
 
 - `extensions` `(list: [])` - A list of strings representing a key/value pair to be used as extensions to the cloud
   configuration (e.g. `volume_api_version` or endpoint overrides). Format is a key and value
