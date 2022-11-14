@@ -39,7 +39,7 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 		TTL:               expTTL / time.Second,
 		ProjectName:       tools.RandomString("p", 5),
 		DomainName:        tools.RandomString("d", 5),
-		UserProjectName:   tools.RandomString("p", 5),
+		UserDomainName:    tools.RandomString("p", 5),
 		ProjectDomainName: tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
@@ -49,8 +49,8 @@ func expectedRoleData(cloudName string) (*roleEntry, map[string]interface{}) {
 		"project_name":        expected.ProjectName,
 		"domain_id":           "",
 		"domain_name":         expected.DomainName,
-		"user_project_id":     "",
-		"user_project_name":   expected.UserProjectName,
+		"user_domain_id":      "",
+		"user_domain_name":    expected.UserDomainName,
 		"project_domain_id":   "",
 		"project_domain_name": expected.ProjectDomainName,
 		"extensions":          map[string]string{},

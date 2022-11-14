@@ -115,13 +115,13 @@ func (b *backend) pathRole() *framework.Path {
 				Type:        framework.TypeNameString,
 				Description: "Specifies a domain name for domain-scoped role.",
 			},
-			"user_project_id": {
+			"user_domain_id": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Specifies a project ID for dynamic user creation.",
+				Description: "Specifies a domain ID for dynamic user creation.",
 			},
-			"user_project_name": {
+			"user_domain_name": {
 				Type:        framework.TypeNameString,
-				Description: "Specifies a project name for dynamic user creation.",
+				Description: "Specifies a domain name for dynamic user creation.",
 			},
 			"project_domain_id": {
 				Type:        framework.TypeLowerCaseString,
@@ -184,8 +184,8 @@ type roleEntry struct {
 	ProjectName       string            `json:"project_name"`
 	DomainID          string            `json:"domain_id"`
 	DomainName        string            `json:"domain_name"`
-	UserProjectId     string            `json:"user_project_id"`
-	UserProjectName   string            `json:"user_project_name"`
+	UserDomainId      string            `json:"user_domain_id"`
+	UserDomainName    string            `json:"user_domain_name"`
 	ProjectDomainId   string            `json:"project_domain_id"`
 	ProjectDomainName string            `json:"project_domain_name"`
 	Extensions        map[string]string `json:"extensions"`
@@ -237,8 +237,8 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"project_name":        src.ProjectName,
 		"domain_id":           src.DomainID,
 		"domain_name":         src.DomainName,
-		"user_project_id":     src.UserProjectId,
-		"user_project_name":   src.UserProjectName,
+		"user_domain_id":      src.UserDomainId,
+		"user_domain_name":    src.UserDomainName,
 		"project_domain_id":   src.ProjectDomainId,
 		"project_domain_name": src.ProjectDomainName,
 		"extensions":          src.Extensions,
@@ -333,12 +333,12 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.DomainID = id.(string)
 	}
 
-	if name, ok := d.GetOk("user_project_name"); ok {
-		entry.UserProjectName = name.(string)
+	if name, ok := d.GetOk("user_domain_name"); ok {
+		entry.UserDomainName = name.(string)
 	}
 
-	if id, ok := d.GetOk("user_project_id"); ok {
-		entry.UserProjectId = id.(string)
+	if id, ok := d.GetOk("user_domain_id"); ok {
+		entry.UserDomainId = id.(string)
 	}
 
 	if name, ok := d.GetOk("project_domain_name"); ok {
