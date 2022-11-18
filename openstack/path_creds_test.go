@@ -23,12 +23,13 @@ func TestCredentialsRead_ok(t *testing.T) {
 	userID, _ := uuid.GenerateUUID()
 	projectName := tools.RandomString("p", 5)
 	fixtures.SetupKeystoneMock(t, userID, projectName, fixtures.EnabledMocks{
-		TokenPost:   true,
-		TokenGet:    true,
-		ProjectList: true,
-		TokenDelete: true,
-		UserPost:    true,
-		UserDelete:  true,
+		TokenPost:       true,
+		TokenGet:        true,
+		ProjectList:     true,
+		TokenDelete:     true,
+		UserPost:        true,
+		UserDelete:      true,
+		AvailDomainList: true,
 	})
 
 	testClient := thClient.ServiceClient()

@@ -92,11 +92,73 @@ func handleGetToken(t *testing.T, w http.ResponseWriter, r *http.Request, userID
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, `
 {
-  "token": {
-    "user": {
-      "id": "%s"
+    "token": {
+        "methods": [
+            "password"
+        ],
+        "user": {
+            "domain": {
+                "id": "28c40f683607401da09214d373785a2d",
+                "name": "mydomain"
+            },
+            "id": "%s",
+            "name": "admin",
+            "password_expires_at": null
+        },
+        "audit_ids": [
+            "79uOElBBQguxhPHVLlCiIQ"
+        ],
+        "expires_at": "2022-11-19T01:54:23.000000Z",
+        "issued_at": "2022-11-18T13:54:23.000000Z",
+        "domain": {
+            "id": "52af04aec5f84182b06959d2775d2000",
+            "name": "mydomain"
+        },
+        "roles": [
+            {
+                "id": "7d7d81cdaad4475e96d34817f1632eca",
+                "name": "reader"
+            },
+            {
+                "id": "72badea89a5d4d9cb97a4d13e8d8c486",
+                "name": "member"
+            },
+            {
+                "id": "60e69bd42e12450b925f763d574d6125",
+                "name": "admin"
+            }
+        ],
+        "catalog": [
+            {
+                "endpoints": [
+                    {
+                        "id": "333f811aeff140768a59c9d1d9b43087",
+                        "interface": "internal",
+                        "region_id": "RegionOne",
+                        "url": "http://example.com",
+                        "region": "RegionOne"
+                    },
+                    {
+                        "id": "96207c76a6154aaaa017214cd0a27810",
+                        "interface": "admin",
+                        "region_id": "RegionOne",
+                        "url": "http://example.com",
+                        "region": "RegionOne"
+                    },
+                    {
+                        "id": "b3861966f62349d6ae73bf113eacb2cc",
+                        "interface": "public",
+                        "region_id": "RegionOne",
+                        "url": "http://example.com",
+                        "region": "RegionOne"
+                    }
+                ],
+                "id": "b2724497bfac49a68578e11fa7c34292",
+                "type": "identity",
+                "name": "keystone"
+            }
+        ]
     }
-  }
 }
 `, userID)
 }
@@ -303,18 +365,61 @@ func handleProjectList(t *testing.T, w http.ResponseWriter, r *http.Request, pro
 `, projectName)
 }
 
+func handleDomainList(t *testing.T, w http.ResponseWriter, r *http.Request, projectName string) {
+	t.Helper()
+
+	th.TestHeader(t, r, "Accept", "application/json")
+	th.TestMethod(t, r, "GET")
+
+	w.Header().Add("Content-Type", "application/json")
+
+	_, _ = fmt.Fprintf(w, `
+{
+    "domains": [
+        {
+            "id": "test-id",
+            "name": "%s",
+            "description": "",
+            "enabled": true,
+            "tags": [],
+            "options": {},
+            "links": {
+                "self": "https://example.com/v3/domains/test-id"
+            }
+        },
+        {
+            "id": "default",
+            "name": "Default",
+            "description": "The default domain",
+            "enabled": true,
+            "tags": [],
+            "options": {},
+            "links": {
+                "self": "https://example.com/v3/domains/default"
+            }
+        }
+    ],
+    "links": {
+        "next": null,
+        "self": "https://example.com/v3/domains",
+        "previous": null
+    }
+}`, projectName)
+}
+
 type EnabledMocks struct {
-	TokenPost      bool
-	TokenGet       bool
-	TokenDelete    bool
-	PasswordChange bool
-	ProjectList    bool
-	UserPost       bool
-	UserPatch      bool
-	UserList       bool
-	UserDelete     bool
-	UserGet        bool
-	GroupList      bool
+	TokenPost       bool
+	TokenGet        bool
+	TokenDelete     bool
+	PasswordChange  bool
+	ProjectList     bool
+	UserPost        bool
+	UserPatch       bool
+	UserList        bool
+	UserDelete      bool
+	UserGet         bool
+	GroupList       bool
+	AvailDomainList bool
 }
 
 func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled EnabledMocks) {
@@ -405,6 +510,17 @@ func SetupKeystoneMock(t *testing.T, userID, projectName string, enabled Enabled
 		case "GET":
 			if enabled.GroupList {
 				handleListGroups(t, w, r)
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	})
+
+	th.Mux.HandleFunc("/v3/auth/domains", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			if enabled.AvailDomainList {
+				handleDomainList(t, w, r, projectName)
 			}
 		default:
 			w.WriteHeader(404)

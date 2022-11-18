@@ -11,7 +11,6 @@ import (
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -184,9 +183,9 @@ type roleEntry struct {
 	ProjectName       string            `json:"project_name"`
 	DomainID          string            `json:"domain_id"`
 	DomainName        string            `json:"domain_name"`
-	UserDomainId      string            `json:"user_domain_id"`
+	UserDomainID      string            `json:"user_domain_id"`
 	UserDomainName    string            `json:"user_domain_name"`
-	ProjectDomainId   string            `json:"project_domain_id"`
+	ProjectDomainID   string            `json:"project_domain_id"`
 	ProjectDomainName string            `json:"project_domain_name"`
 	Extensions        map[string]string `json:"extensions"`
 }
@@ -237,9 +236,9 @@ func roleToMap(src *roleEntry) map[string]interface{} {
 		"project_name":        src.ProjectName,
 		"domain_id":           src.DomainID,
 		"domain_name":         src.DomainName,
-		"user_domain_id":      src.UserDomainId,
+		"user_domain_id":      src.UserDomainID,
 		"user_domain_name":    src.UserDomainName,
-		"project_domain_id":   src.ProjectDomainId,
+		"project_domain_id":   src.ProjectDomainID,
 		"project_domain_name": src.ProjectDomainName,
 		"extensions":          src.Extensions,
 	}
@@ -338,7 +337,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if id, ok := d.GetOk("user_domain_id"); ok {
-		entry.UserDomainId = id.(string)
+		entry.UserDomainID = id.(string)
 	}
 
 	if name, ok := d.GetOk("project_domain_name"); ok {
@@ -346,7 +345,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if id, ok := d.GetOk("project_domain_id"); ok {
-		entry.ProjectDomainId = id.(string)
+		entry.ProjectDomainID = id.(string)
 	}
 
 	if ext, ok := d.GetOk("extensions"); ok {
@@ -362,14 +361,13 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 			return nil, logical.CodedError(http.StatusUnauthorized, common.LogHttpError(err).Error())
 		}
 
-		token := tokens.Get(client, client.Token())
-		user, err := token.ExtractUser()
+		userDomainId, err := getUserDomain(client, entry)
 		if err != nil {
-			return nil, fmt.Errorf("error extracting the user from token: %w", err)
+			return nil, err
 		}
 
 		groupPages, err := groups.List(client, groups.ListOpts{
-			DomainID: user.Domain.ID,
+			DomainID: userDomainId,
 		}).AllPages()
 		if err != nil {
 			return nil, fmt.Errorf("error querying user groups of dynamic role: %w", err)
