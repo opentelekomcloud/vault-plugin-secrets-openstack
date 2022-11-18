@@ -13,6 +13,6 @@ func listAvailableURL(client *gophercloud.ServiceClient) string {
 func ListAvailable(client *gophercloud.ServiceClient) pagination.Pager {
 	url := listAvailableURL(client)
 	return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
-		return domains.DomainPage{pagination.LinkedPageBase{PageResult: r}}
+		return domains.DomainPage{LinkedPageBase: pagination.LinkedPageBase{PageResult: r}}
 	})
 }
