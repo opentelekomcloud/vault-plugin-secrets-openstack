@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/domains"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
 	"net/http"
@@ -318,11 +319,11 @@ func (b *backend) userDelete(ctx context.Context, r *logical.Request, _ *framewo
 }
 
 func createUser(client *gophercloud.ServiceClient, username, password string, role *roleEntry) (*users.User, error) {
-	token := tokens.Get(client, client.Token())
-	user, err := token.ExtractUser()
+	userDomainID, err := getUserDomain(client, role)
 	if err != nil {
-		return nil, fmt.Errorf("error extracting the user from token: %w", err)
+		return nil, err
 	}
+	// TODO: implement situation where userDomainId != currentDomainID
 
 	projectID := role.ProjectID
 	if projectID == "" && role.ProjectName != "" {
@@ -347,7 +348,7 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 		Name:             username,
 		DefaultProjectID: projectID,
 		Description:      "Vault's temporary user",
-		DomainID:         user.Domain.ID,
+		DomainID:         userDomainID,
 		Password:         password,
 	}
 
@@ -368,18 +369,18 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 			ProjectID: projectID,
 		}
 		if err := roles.Assign(client, identityRole.ID, assignOpts).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole, err)
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole.Name, err)
 		}
 	}
 
-	groupsToAssign, err := filterGroups(client, user.Domain.ID, role.UserGroups)
+	groupsToAssign, err := filterGroups(client, userDomainID, role.UserGroups)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, group := range groupsToAssign {
 		if err := users.AddToGroup(client, group.ID, newUser.ID).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot add a temporary user to a group `%s`: %w", group, err)
+			return nil, fmt.Errorf("cannot add a temporary user to a group `%s`: %w", group.Name, err)
 		}
 	}
 
@@ -459,6 +460,12 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 		scope = tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
+	case role.ProjectName != "" && (role.ProjectDomainName != "" || role.ProjectDomainID != ""):
+		scope = tokens.Scope{
+			ProjectName: role.ProjectName,
+			DomainName:  role.ProjectDomainName,
+			DomainID:    role.ProjectDomainID,
+		}
 	case role.ProjectName != "":
 		scope = tokens.Scope{
 			ProjectName: role.ProjectName,
@@ -530,4 +537,50 @@ func formAuthResponse(role *roleEntry, authResponse *authResponseData) map[strin
 	auth["auth_url"] = authResponse.AuthURL
 
 	return auth
+}
+
+func getUserDomain(client *gophercloud.ServiceClient, role *roleEntry) (string, error) {
+	var userDomainID string
+	var err error
+
+	if role.UserDomainID != "" {
+		userDomainID = role.UserDomainID
+	} else if role.UserDomainName != "" {
+		userDomainID, err = getDomainByName(client, role.UserDomainName)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		token := tokens.Get(client, client.Token())
+		domain, err := token.ExtractDomain()
+		if err != nil {
+			return userDomainID, fmt.Errorf("error extracting the domain from token: %w", err)
+		}
+		userDomainID = domain.ID
+	}
+	return userDomainID, nil
+}
+
+func getDomainByName(client *gophercloud.ServiceClient, domainName string) (string, error) {
+	var userDomainID string
+	err := common.ListAvailable(client).EachPage(func(page pagination.Page) (bool, error) {
+		availDomains, err := domains.ExtractDomains(page)
+		if err != nil {
+			return false, err
+		}
+		if len(availDomains) == 0 {
+			return false, fmt.Errorf("failed to find domain with name: %s", domainName)
+		}
+		for _, domain := range availDomains {
+			if domain.Name == domainName {
+				userDomainID = domain.ID
+				return false, nil
+			}
+		}
+		return false, fmt.Errorf("failed to find domain with the name: %s", domainName)
+	})
+	if err != nil {
+		return "", err
+	}
+	return userDomainID, nil
 }

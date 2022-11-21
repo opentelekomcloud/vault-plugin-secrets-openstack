@@ -115,6 +115,22 @@ func (b *backend) pathRole() *framework.Path {
 				Type:        framework.TypeNameString,
 				Description: "Specifies a domain name for domain-scoped role.",
 			},
+			"user_domain_id": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Specifies a domain ID for dynamic user creation.",
+			},
+			"user_domain_name": {
+				Type:        framework.TypeNameString,
+				Description: "Specifies a domain name for dynamic user creation.",
+			},
+			"project_domain_id": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Specifies a domain ID of project.",
+			},
+			"project_domain_name": {
+				Type:        framework.TypeNameString,
+				Description: "Specifies a domain name of project.",
+			},
 			"extensions": {
 				Type: framework.TypeKVPairs,
 				Description: "A list of strings representing a key/value pair to be used as extensions to the cloud " +
@@ -157,18 +173,22 @@ const (
 )
 
 type roleEntry struct {
-	Name        string            `json:"name"`
-	Cloud       string            `json:"cloud"`
-	Root        bool              `json:"root"`
-	TTL         time.Duration     `json:"ttl,omitempty"`
-	SecretType  secretType        `json:"secret_type"`
-	UserGroups  []string          `json:"user_groups"`
-	UserRoles   []string          `json:"user_roles"`
-	ProjectID   string            `json:"project_id"`
-	ProjectName string            `json:"project_name"`
-	DomainID    string            `json:"domain_id"`
-	DomainName  string            `json:"domain_name"`
-	Extensions  map[string]string `json:"extensions"`
+	Name              string            `json:"name"`
+	Cloud             string            `json:"cloud"`
+	Root              bool              `json:"root"`
+	TTL               time.Duration     `json:"ttl,omitempty"`
+	SecretType        secretType        `json:"secret_type"`
+	UserGroups        []string          `json:"user_groups"`
+	UserRoles         []string          `json:"user_roles"`
+	ProjectID         string            `json:"project_id"`
+	ProjectName       string            `json:"project_name"`
+	DomainID          string            `json:"domain_id"`
+	DomainName        string            `json:"domain_name"`
+	UserDomainID      string            `json:"user_domain_id"`
+	UserDomainName    string            `json:"user_domain_name"`
+	ProjectDomainID   string            `json:"project_domain_id"`
+	ProjectDomainName string            `json:"project_domain_name"`
+	Extensions        map[string]string `json:"extensions"`
 }
 
 func roleStoragePath(name string) string {
@@ -207,17 +227,21 @@ func getRoleByName(ctx context.Context, name string, s logical.Storage) (*roleEn
 
 func roleToMap(src *roleEntry) map[string]interface{} {
 	return map[string]interface{}{
-		"cloud":        src.Cloud,
-		"root":         src.Root,
-		"ttl":          src.TTL,
-		"secret_type":  string(src.SecretType),
-		"user_groups":  src.UserGroups,
-		"user_roles":   src.UserRoles,
-		"project_id":   src.ProjectID,
-		"project_name": src.ProjectName,
-		"domain_id":    src.DomainID,
-		"domain_name":  src.DomainName,
-		"extensions":   src.Extensions,
+		"cloud":               src.Cloud,
+		"root":                src.Root,
+		"ttl":                 src.TTL,
+		"secret_type":         string(src.SecretType),
+		"user_groups":         src.UserGroups,
+		"user_roles":          src.UserRoles,
+		"project_id":          src.ProjectID,
+		"project_name":        src.ProjectName,
+		"domain_id":           src.DomainID,
+		"domain_name":         src.DomainName,
+		"user_domain_id":      src.UserDomainID,
+		"user_domain_name":    src.UserDomainName,
+		"project_domain_id":   src.ProjectDomainID,
+		"project_domain_name": src.ProjectDomainName,
+		"extensions":          src.Extensions,
 	}
 }
 
@@ -309,6 +333,22 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		entry.DomainID = id.(string)
 	}
 
+	if name, ok := d.GetOk("user_domain_name"); ok {
+		entry.UserDomainName = name.(string)
+	}
+
+	if id, ok := d.GetOk("user_domain_id"); ok {
+		entry.UserDomainID = id.(string)
+	}
+
+	if name, ok := d.GetOk("project_domain_name"); ok {
+		entry.ProjectDomainName = name.(string)
+	}
+
+	if id, ok := d.GetOk("project_domain_id"); ok {
+		entry.ProjectDomainID = id.(string)
+	}
+
 	if ext, ok := d.GetOk("extensions"); ok {
 		entry.Extensions = ext.(map[string]string)
 	}
@@ -323,13 +363,13 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 
 		token := tokens.Get(client, client.Token())
-		user, err := token.ExtractUser()
+		domain, err := token.ExtractDomain()
 		if err != nil {
-			return nil, fmt.Errorf("error extracting the user from token: %w", err)
+			return nil, fmt.Errorf("error extracting the domain from token: %w", err)
 		}
 
 		groupPages, err := groups.List(client, groups.ListOpts{
-			DomainID: user.Domain.ID,
+			DomainID: domain.ID,
 		}).AllPages()
 		if err != nil {
 			return nil, fmt.Errorf("error querying user groups of dynamic role: %w", err)

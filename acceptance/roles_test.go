@@ -40,7 +40,6 @@ func extractRoleData(t *testing.T, resp *http.Response) *roleData {
 
 func (p *PluginTest) TestRoleLifecycle() {
 	t := p.T()
-
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)
 
