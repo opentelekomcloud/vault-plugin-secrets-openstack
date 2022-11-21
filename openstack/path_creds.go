@@ -554,7 +554,7 @@ func getUserDomain(client *gophercloud.ServiceClient, role *roleEntry) (string, 
 		token := tokens.Get(client, client.Token())
 		domain, err := token.ExtractDomain()
 		if err != nil {
-			return userDomainID, fmt.Errorf("error extracting the user from token: %w", err)
+			return userDomainID, fmt.Errorf("error extracting the domain from token: %w", err)
 		}
 		userDomainID = domain.ID
 	}

@@ -365,7 +365,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		token := tokens.Get(client, client.Token())
 		domain, err := token.ExtractDomain()
 		if err != nil {
-			return nil, fmt.Errorf("error extracting the user from token: %w", err)
+			return nil, fmt.Errorf("error extracting the domain from token: %w", err)
 		}
 
 		groupPages, err := groups.List(client, groups.ListOpts{
