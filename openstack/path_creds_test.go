@@ -73,6 +73,19 @@ func TestCredentialsRead_ok(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Data)
 	})
+	t.Run("user_domain_id_token", func(t *testing.T) {
+		require.NoError(t, s.Put(context.Background(), cloudEntry))
+
+		roleName := createSaveUserDomainIDRole(t, s, false, projectName, "token")
+
+		res, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      credsPath(roleName),
+			Storage:   s,
+		})
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Data)
+	})
 	t.Run("user_password", func(t *testing.T) {
 		require.NoError(t, s.Put(context.Background(), cloudEntry))
 
@@ -296,6 +309,23 @@ func createSaveRandomRole(t *testing.T, s logical.Storage, root bool, projectNam
 		"domain_name":  tools.RandomString("d", 5),
 		"root":         root,
 		"secret_type":  sType,
+	}
+	saveRawRole(t, roleName, role, s)
+
+	return roleName
+}
+
+func createSaveUserDomainIDRole(t *testing.T, s logical.Storage, root bool, projectName, sType string) string {
+	roleName := randomRoleName()
+	role := map[string]interface{}{
+		"name":             roleName,
+		"cloud":            testCloudName,
+		"ttl":              time.Hour / time.Second,
+		"project_name":     projectName,
+		"domain_id":        tools.RandomString("d", 5),
+		"user_domain_name": projectName,
+		"root":             root,
+		"secret_type":      sType,
 	}
 	saveRawRole(t, roleName, role, s)
 

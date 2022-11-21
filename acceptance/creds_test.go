@@ -6,6 +6,7 @@ package acceptance
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
@@ -15,18 +16,22 @@ import (
 )
 
 type testCase struct {
-	Cloud      string
-	ProjectID  string
-	DomainID   string
-	Root       bool
-	SecretType string
-	UserRoles  []string
-	Extensions map[string]interface{}
+	Cloud          string
+	ProjectID      string
+	DomainID       string
+	UserDomainID   string
+	UserDomainName string
+	Root           bool
+	SecretType     string
+	UserRoles      []string
+	UserGroups     []string
+	Extensions     map[string]interface{}
 }
 
 func (p *PluginTest) TestCredsLifecycle() {
 	t := p.T()
 
+	userDomainID := os.Getenv("USER_DOMAIN_ID")
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)
 
@@ -45,7 +50,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 			DomainID:   aux.DomainID,
 			Root:       false,
 			SecretType: "token",
-			UserRoles:  []string{"member"},
+			UserGroups: []string{"mygroup"},
 			Extensions: map[string]interface{}{
 				"identity_api_version": "3",
 			},
@@ -58,6 +63,17 @@ func (p *PluginTest) TestCredsLifecycle() {
 			SecretType: "password",
 			Extensions: map[string]interface{}{
 				"object_store_endpoint_override": "https://swift.example.com",
+			},
+		},
+		"user_domain_id_token": {
+			Cloud:        cloud.Name,
+			ProjectID:    aux.ProjectID,
+			UserDomainID: userDomainID,
+			Root:         false,
+			SecretType:   "token",
+			UserRoles:    []string{"member"},
+			Extensions: map[string]interface{}{
+				"identity_api_version": "3",
 			},
 		},
 	}
@@ -154,12 +170,15 @@ func cloudToCloudMap(cloud *openstack.OsCloud) map[string]interface{} {
 
 func cloudToRoleMap(data testCase) map[string]interface{} {
 	return fixtures.SanitizedMap(map[string]interface{}{
-		"cloud":       data.Cloud,
-		"project_id":  data.ProjectID,
-		"domain_id":   data.DomainID,
-		"root":        data.Root,
-		"secret_type": data.SecretType,
-		"user_roles":  data.UserRoles,
-		"extensions":  data.Extensions,
+		"cloud":            data.Cloud,
+		"project_id":       data.ProjectID,
+		"user_domain_id":   data.UserDomainID,
+		"user_domain_name": data.UserDomainName,
+		"domain_id":        data.DomainID,
+		"root":             data.Root,
+		"secret_type":      data.SecretType,
+		"user_roles":       data.UserRoles,
+		"user_groups":      data.UserGroups,
+		"extensions":       data.Extensions,
 	})
 }

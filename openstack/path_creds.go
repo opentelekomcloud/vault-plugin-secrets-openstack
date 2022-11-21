@@ -369,7 +369,7 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 			ProjectID: projectID,
 		}
 		if err := roles.Assign(client, identityRole.ID, assignOpts).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole, err)
+			return nil, fmt.Errorf("cannot assign a role `%s` to a temporary user: %w", identityRole.Name, err)
 		}
 	}
 
@@ -380,7 +380,7 @@ func createUser(client *gophercloud.ServiceClient, username, password string, ro
 
 	for _, group := range groupsToAssign {
 		if err := users.AddToGroup(client, group.ID, newUser.ID).ExtractErr(); err != nil {
-			return nil, fmt.Errorf("cannot add a temporary user to a group `%s`: %w", group, err)
+			return nil, fmt.Errorf("cannot add a temporary user to a group `%s`: %w", group.Name, err)
 		}
 	}
 
@@ -460,7 +460,7 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 		scope = tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
-	case role.ProjectName != "" && role.ProjectDomainName != "":
+	case role.ProjectName != "" && (role.ProjectDomainName != "" || role.ProjectDomainID != ""):
 		scope = tokens.Scope{
 			ProjectName: role.ProjectName,
 			DomainName:  role.ProjectDomainName,
@@ -471,14 +471,6 @@ func getScopeFromRole(role *roleEntry) tokens.Scope {
 			ProjectName: role.ProjectName,
 			DomainName:  role.DomainName,
 			DomainID:    role.DomainID,
-		}
-	case role.ProjectDomainID != "":
-		scope = tokens.Scope{
-			DomainID: role.ProjectDomainID,
-		}
-	case role.ProjectDomainName != "":
-		scope = tokens.Scope{
-			DomainName: role.ProjectDomainName,
 		}
 	case role.DomainID != "":
 		scope = tokens.Scope{

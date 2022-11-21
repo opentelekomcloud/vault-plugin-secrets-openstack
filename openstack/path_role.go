@@ -11,6 +11,7 @@ import (
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -361,13 +362,14 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 			return nil, logical.CodedError(http.StatusUnauthorized, common.LogHttpError(err).Error())
 		}
 
-		userDomainId, err := getUserDomain(client, entry)
+		token := tokens.Get(client, client.Token())
+		domain, err := token.ExtractDomain()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error extracting the user from token: %w", err)
 		}
 
 		groupPages, err := groups.List(client, groups.ListOpts{
-			DomainID: userDomainId,
+			DomainID: domain.ID,
 		}).AllPages()
 		if err != nil {
 			return nil, fmt.Errorf("error querying user groups of dynamic role: %w", err)
