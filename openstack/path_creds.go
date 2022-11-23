@@ -563,7 +563,7 @@ func getUserDomain(client *gophercloud.ServiceClient, role *roleEntry) (string, 
 
 func getDomainByName(client *gophercloud.ServiceClient, domainName string) (string, error) {
 	var userDomainID string
-	err := common.ListAvailable(client).EachPage(func(page pagination.Page) (bool, error) {
+	err := domains.ListAvailable(client).EachPage(func(page pagination.Page) (bool, error) {
 		availDomains, err := domains.ExtractDomains(page)
 		if err != nil {
 			return false, err
