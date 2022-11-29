@@ -131,7 +131,13 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("error creating provider client: %w", common.LogHttpError(err))
 	}
 
-	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{})
+	availability := gophercloud.Availability(cloud.Availability)
+	if cloud.Availability == "" {
+		availability = gophercloud.AvailabilityPublic
+	}
+	sClient, err := openstack.NewIdentityV3(pClient, gophercloud.EndpointOpts{
+		Availability: availability,
+	})
 	if err != nil {
 		return fmt.Errorf("error creating service client: %w", common.LogHttpError(err))
 	}
@@ -151,6 +157,7 @@ func (c *sharedCloud) initClient(ctx context.Context, s logical.Storage) error {
 type OsCloud struct {
 	Name             string `json:"name"`
 	AuthURL          string `json:"auth_url"`
+	Availability     string `json:"availability"`
 	UserDomainName   string `json:"user_domain_name"`
 	Username         string `json:"username"`
 	Password         string `json:"password"`

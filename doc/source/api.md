@@ -16,6 +16,8 @@ will overwrite them.
 
 * `auth_url` `(string: <required>)` - URL of identity service authentication endpoint.
 
+* `availability` - Identity service endpoint interface.
+
 * `user_domain_name` `(string: <required>)` - Name of the domain of the root user.
 
 * `username` `(string: <required>)` - OpenStack username of the root user.

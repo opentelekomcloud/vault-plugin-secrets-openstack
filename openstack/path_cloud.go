@@ -68,6 +68,10 @@ func (b *backend) pathCloud() *framework.Path {
 				Required:    true,
 				Description: "URL of identity service authentication endpoint.",
 			},
+			"availability": {
+				Type:        framework.TypeString,
+				Description: "Identity service endpoint interface.",
+			},
 			"user_domain_name": {
 				Type:        framework.TypeString,
 				Required:    true,
@@ -159,6 +163,9 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 
 	if authURL, ok := d.GetOk("auth_url"); ok {
 		cloudConfig.AuthURL = authURL.(string)
+	}
+	if availability, ok := d.GetOk("availability"); ok {
+		cloudConfig.Availability = availability.(string)
 	}
 	if userDomainName, ok := d.GetOk("user_domain_name"); ok {
 		cloudConfig.UserDomainName = userDomainName.(string)
