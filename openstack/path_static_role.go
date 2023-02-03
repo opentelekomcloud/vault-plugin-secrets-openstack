@@ -255,7 +255,7 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		entry = &roleStaticEntry{Name: name, Cloud: cloudName}
 	}
 
-	if username, ok := d.GetOk("username"); ok && req.Operation == logical.CreateOperation {
+	if username, ok := d.GetOk("username"); ok {
 		entry.Username = username.(string)
 		password, err := Passwords{}.Generate(ctx)
 		if err != nil {
