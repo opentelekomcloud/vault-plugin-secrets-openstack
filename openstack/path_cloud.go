@@ -174,7 +174,7 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 		// validate template first
 		_, err := RandomTemporaryUsername(cloudConfig.UsernameTemplate, &roleEntry{})
 		if err != nil {
-			return logical.ErrorResponse("invalid username template: %s", err), nil
+			return logical.ErrorResponse("invalid username template: %w", err), nil
 		}
 	} else if r.Operation == logical.CreateOperation {
 		cloudConfig.UsernameTemplate = DefaultUsernameTemplate

@@ -196,6 +196,12 @@ func getScopeFromStaticRole(role *roleStaticEntry) tokens.Scope {
 		scope = tokens.Scope{
 			ProjectID: role.ProjectID,
 		}
+	case role.ProjectName != "" && (role.ProjectDomainName != "" || role.ProjectDomainID != ""):
+		scope = tokens.Scope{
+			ProjectName: role.ProjectName,
+			DomainName:  role.ProjectDomainName,
+			DomainID:    role.ProjectDomainID,
+		}
 	case role.ProjectName != "":
 		scope = tokens.Scope{
 			ProjectName: role.ProjectName,

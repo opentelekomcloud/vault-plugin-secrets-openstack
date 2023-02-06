@@ -141,19 +141,23 @@ func (b *backend) staticRoleExistenceCheck(ctx context.Context, r *logical.Reque
 }
 
 type roleStaticEntry struct {
-	Name             string            `json:"name"`
-	Cloud            string            `json:"cloud"`
-	TTL              time.Duration     `json:"ttl,omitempty"`
-	RotationDuration time.Duration     `json:"rotation_duration,omitempty"`
-	SecretType       secretType        `json:"secret_type"`
-	Secret           string            `json:"secret"`
-	Username         string            `json:"username"`
-	UserID           string            `json:"user_id"`
-	ProjectID        string            `json:"project_id"`
-	ProjectName      string            `json:"project_name"`
-	DomainID         string            `json:"domain_id"`
-	DomainName       string            `json:"domain_name"`
-	Extensions       map[string]string `json:"extensions"`
+	Name              string            `json:"name"`
+	Cloud             string            `json:"cloud"`
+	TTL               time.Duration     `json:"ttl,omitempty"`
+	RotationDuration  time.Duration     `json:"rotation_duration,omitempty"`
+	SecretType        secretType        `json:"secret_type"`
+	Secret            string            `json:"secret"`
+	Username          string            `json:"username"`
+	UserID            string            `json:"user_id"`
+	ProjectID         string            `json:"project_id"`
+	ProjectName       string            `json:"project_name"`
+	DomainID          string            `json:"domain_id"`
+	DomainName        string            `json:"domain_name"`
+	UserDomainID      string            `json:"user_domain_id"`
+	UserDomainName    string            `json:"user_domain_name"`
+	ProjectDomainID   string            `json:"project_domain_id"`
+	ProjectDomainName string            `json:"project_domain_name"`
+	Extensions        map[string]string `json:"extensions"`
 }
 
 func roleStaticStoragePath(name string) string {
@@ -193,15 +197,19 @@ func getStaticRoleByName(ctx context.Context, name string, s *logical.Request) (
 
 func staticRoleToMap(src *roleStaticEntry) map[string]interface{} {
 	return map[string]interface{}{
-		"cloud":             src.Cloud,
-		"rotation_duration": src.RotationDuration,
-		"secret_type":       string(src.SecretType),
-		"username":          src.Username,
-		"project_id":        src.ProjectID,
-		"project_name":      src.ProjectName,
-		"domain_id":         src.DomainID,
-		"domain_name":       src.DomainName,
-		"extensions":        src.Extensions,
+		"cloud":               src.Cloud,
+		"rotation_duration":   src.RotationDuration,
+		"secret_type":         string(src.SecretType),
+		"username":            src.Username,
+		"project_id":          src.ProjectID,
+		"project_name":        src.ProjectName,
+		"domain_id":           src.DomainID,
+		"domain_name":         src.DomainName,
+		"user_domain_id":      src.UserDomainID,
+		"user_domain_name":    src.UserDomainName,
+		"project_domain_id":   src.ProjectDomainID,
+		"project_domain_name": src.ProjectDomainName,
+		"extensions":          src.Extensions,
 	}
 }
 
@@ -255,6 +263,14 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 		entry = &roleStaticEntry{Name: name, Cloud: cloudName}
 	}
 
+	if name, ok := d.GetOk("user_domain_name"); ok {
+		entry.UserDomainName = name.(string)
+	}
+
+	if id, ok := d.GetOk("user_domain_id"); ok {
+		entry.UserDomainID = id.(string)
+	}
+
 	if username, ok := d.GetOk("username"); ok {
 		entry.Username = username.(string)
 		password, err := Passwords{}.Generate(ctx)
@@ -262,9 +278,10 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 
+		// TODO: implement situation where userDomainId != currentDomainID
 		userId, err := b.rotateUserPassword(ctx, req, cloud, username.(string), password)
 		if err != nil {
-			return logical.ErrorResponse("error during role creation: %s", err), nil
+			return logical.ErrorResponse("error during role creation: %w", err), nil
 		}
 
 		entry.UserID = userId
@@ -302,6 +319,14 @@ func (b *backend) pathStaticRoleUpdate(ctx context.Context, req *logical.Request
 
 	if id, ok := d.GetOk("domain_id"); ok {
 		entry.DomainID = id.(string)
+	}
+
+	if name, ok := d.GetOk("project_domain_name"); ok {
+		entry.ProjectDomainName = name.(string)
+	}
+
+	if id, ok := d.GetOk("project_domain_id"); ok {
+		entry.ProjectDomainID = id.(string)
 	}
 
 	if ext, ok := d.GetOk("extensions"); ok {

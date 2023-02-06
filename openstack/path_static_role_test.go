@@ -37,15 +37,19 @@ func expectedStaticRoleData(cloudName string) (*roleStaticEntry, map[string]inte
 		DomainName:       tools.RandomString("d", 5),
 	}
 	expectedMap := map[string]interface{}{
-		"cloud":             expected.Cloud,
-		"project_id":        "",
-		"project_name":      expected.ProjectName,
-		"domain_id":         "",
-		"domain_name":       expected.DomainName,
-		"extensions":        map[string]string{},
-		"rotation_duration": expTTL,
-		"secret_type":       "token",
-		"username":          "static-test",
+		"cloud":               expected.Cloud,
+		"project_id":          "",
+		"project_name":        expected.ProjectName,
+		"domain_id":           "",
+		"domain_name":         expected.DomainName,
+		"project_domain_id":   "",
+		"project_domain_name": "",
+		"user_domain_id":      "",
+		"user_domain_name":    "",
+		"extensions":          map[string]string{},
+		"rotation_duration":   expTTL,
+		"secret_type":         "token",
+		"username":            "static-test",
 	}
 	return expected, expectedMap
 }
