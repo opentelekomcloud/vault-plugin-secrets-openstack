@@ -6,7 +6,6 @@ package acceptance
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
@@ -31,7 +30,6 @@ type testCase struct {
 func (p *PluginTest) TestCredsLifecycle() {
 	t := p.T()
 
-	userDomainID := os.Getenv("USER_DOMAIN_ID")
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)
 
@@ -68,7 +66,7 @@ func (p *PluginTest) TestCredsLifecycle() {
 		"user_domain_id_token": {
 			Cloud:        cloud.Name,
 			ProjectID:    aux.ProjectID,
-			UserDomainID: userDomainID,
+			UserDomainID: aux.DomainID,
 			Root:         false,
 			SecretType:   "token",
 			UserRoles:    []string{"member"},

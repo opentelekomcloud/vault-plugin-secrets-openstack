@@ -182,10 +182,10 @@ created. If the role exists, it will be updated with the new attributes.
   `domain_id`.
 
 - `user_domain_id` `(string: <optional>)` - Specifies domain where user will be created with given domain id. 
-  Mutually exclusive with `user_project_name`.
+  Mutually exclusive with `user_domain_name`.
 
 - `user_domain_name` `(string: <optional>)` - Specifies domain where user will be created with given domain name.
-  Mutually exclusive with `user_project_id`.
+  Mutually exclusive with `user_domain_id`.
 
 - `project_domain_id` `(string: <optional>)` - Specifies domain for project-scoped role with given domain id.
   If one of `project_id` / `project_name` is not set `project_domain_id` value is ignored.
@@ -472,7 +472,19 @@ created. If the role exists, it will be updated with the new attributes.
 - `domain_name` `(string: <optional>)` - Create a domain-scoped role with given domain name. Mutually exclusive with
   `domain_id`.
 
-When none of `project_name` or `project_id` is set, created role will have a project scope.
+- `user_domain_id` `(string: <optional>)` - Specifies domain id of existing user.
+  Mutually exclusive with `user_domain_name`.
+
+- `user_domain_name` `(string: <optional>)` - Specifies domain name of existing user.
+  Mutually exclusive with `user_domain_id`.
+
+- `project_domain_id` `(string: <optional>)` - Specifies domain for project-scoped role with given domain id.
+  If one of `project_id` / `project_name` is not set `project_domain_id` value is ignored.
+
+- `project_domain_name` `(string: <optional>)` - Specifies domain for project-scoped role with given domain name.
+  If one of `project_id` / `project_name` is not set `project_domain_name` value is ignored.
+
+When one of `project_name` or `project_id` is set, created static role will have a project scope.
 
 - `extensions` `(list: [])` - A list of strings representing a key/value pair to be used as extensions to the cloud
   configuration (e.g. `volume_api_version` or endpoint overrides). Format is a key and value
