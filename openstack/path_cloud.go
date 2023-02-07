@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
+	"time"
 )
 
 const (
@@ -20,6 +21,7 @@ Configure the root credentials for an OpenStack cloud using the above parameters
 	pathCloudListHelpDesc = `List existing OpenStack clouds by name.`
 
 	DefaultUsernameTemplate = "vault{{random 8 | lowercase}}"
+	defaultRootPasswordTTL  = 4380 * time.Hour
 )
 
 func storageCloudKey(name string) string {
@@ -28,6 +30,18 @@ func storageCloudKey(name string) string {
 
 func pathCloudKey(name string) string {
 	return fmt.Sprintf("%s/%s", pathCloud, name)
+}
+
+type OsCloud struct {
+	Name                       string        `json:"name"`
+	AuthURL                    string        `json:"auth_url"`
+	UserDomainName             string        `json:"user_domain_name"`
+	Username                   string        `json:"username"`
+	Password                   string        `json:"password"`
+	UsernameTemplate           string        `json:"username_template"`
+	PasswordPolicy             string        `json:"password_policy"`
+	RootPasswordTTL            time.Duration `json:"root_password_ttl"`
+	RootPasswordExpirationDate time.Time     `json:"root_password_expiration_date"`
 }
 
 func (c *sharedCloud) getCloudConfig(ctx context.Context, s logical.Storage) (*OsCloud, error) {
@@ -94,6 +108,12 @@ func (b *backend) pathCloud() *framework.Path {
 			"password_policy": {
 				Type:        framework.TypeString,
 				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
+			},
+			"root_password_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Default:     defaultRootPasswordTTL,
+				Description: "The TTL of the root password for openstack user. This can be either a number of seconds or a time formatted duration (ex: 24h, 48ds)",
+				Required:    false,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -176,12 +196,20 @@ func (b *backend) pathCloudCreateUpdate(ctx context.Context, r *logical.Request,
 		if err != nil {
 			return logical.ErrorResponse("invalid username template: %w", err), nil
 		}
-	} else if r.Operation == logical.CreateOperation {
+	} else if r.Operation == logical.CreateOperation && cloudConfig.UsernameTemplate == "" {
 		cloudConfig.UsernameTemplate = DefaultUsernameTemplate
 	}
 	if pwdPolicy, ok := d.GetOk("password_policy"); ok {
 		cloudConfig.PasswordPolicy = pwdPolicy.(string)
 	}
+
+	if rootExpirationRaw, ok := d.GetOk("root_password_ttl"); ok {
+		cloudConfig.RootPasswordTTL = time.Second * time.Duration(rootExpirationRaw.(int))
+	} else if r.Operation == logical.CreateOperation && cloudConfig.RootPasswordTTL == 0 {
+		cloudConfig.RootPasswordTTL = defaultRootPasswordTTL
+	}
+
+	cloudConfig.RootPasswordExpirationDate = time.Now().Add(cloudConfig.RootPasswordTTL)
 
 	sCloud.passwords = &Passwords{
 		PolicyGenerator: b.System(),
@@ -212,6 +240,8 @@ func (b *backend) pathCloudRead(ctx context.Context, r *logical.Request, d *fram
 			"username":          cloudConfig.Username,
 			"username_template": cloudConfig.UsernameTemplate,
 			"password_policy":   cloudConfig.PasswordPolicy,
+			"root_password_ttl": int(cloudConfig.RootPasswordTTL.Seconds()),
+			"next_rotation":     cloudConfig.RootPasswordExpirationDate.Format(time.RFC822),
 		},
 	}, nil
 }

@@ -22,6 +22,8 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
+* `root_password_ttl` `(string: <optional>)` - Password rotation period. Default period is six month.
+
 * `username_template` `(string: "vault{{random 8 | lowercase}}")` - Template used for usernames
   of temporary users. For details on templating syntax please refer to
   [Username Templating](https://www.vaultproject.io/docs/concepts/username-templating). Additional
@@ -39,7 +41,8 @@ will overwrite them.
   "username": "admin",
   "password": "RcigTiYrJjVmEkrV71Cd",
   "user_domain_name": "Default",
-  "username_template": "user-{{ .RoleName }}-{{ random 4 }}"
+  "username_template": "user-{{ .RoleName }}-{{ random 4 }}",
+  "root_password_ttl": "5h"
 }
 ```
 
