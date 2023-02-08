@@ -2,14 +2,12 @@ package openstack
 
 import (
 	"context"
-	"strings"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"strings"
+	"testing"
 )
 
 var (
@@ -25,7 +23,7 @@ var (
 	testPolicy2        = "openstack"
 )
 
-func TestCloudCreate(t *testing.T) {
+func TestLifecyle(t *testing.T) {
 	t.Run("EmptyConfig", func(t *testing.T) {
 		b, storage := testBackend(t)
 
@@ -198,4 +196,92 @@ func TestCloudCreate(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, res.Data["keys"], cloudCount)
 	})
+}
+
+func TestConfig(t *testing.T) {
+	b, s := testBackend(t)
+
+	tests := []struct {
+		name     string
+		config   map[string]interface{}
+		expected map[string]interface{}
+		wantErr  bool
+	}{
+		{
+			name: "root_password_ttl defaults to 6 months",
+			config: map[string]interface{}{
+				"auth_url":          "https://test-001.com/v3",
+				"username":          "test-username-1",
+				"user_domain_name":  "testUserDomainName",
+				"password":          "testUserPassword",
+				"username_template": "user-{{ .RoleName }}-{{ random 4 }}",
+			},
+			expected: map[string]interface{}{
+				"auth_url":          "https://test-001.com/v3",
+				"username":          "test-username-1",
+				"user_domain_name":  "testUserDomainName",
+				"username_template": "user-{{ .RoleName }}-{{ random 4 }}",
+				"root_password_ttl": 15768000,
+				"password_policy":   "",
+			},
+		},
+		{
+			name: "root_password_ttl is provided",
+			config: map[string]interface{}{
+				"auth_url":          "https://test-001.com/v3",
+				"username":          "test-username-2",
+				"user_domain_name":  "testUserDomainName",
+				"password":          "testUserPassword",
+				"root_password_ttl": "1m",
+			},
+			expected: map[string]interface{}{
+				"auth_url":          "https://test-001.com/v3",
+				"username":          "test-username-2",
+				"user_domain_name":  "testUserDomainName",
+				"password_policy":   "",
+				"root_password_ttl": 60,
+				"username_template": "vault{{random 8 | lowercase}}"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var cloudName = strings.ToLower(tools.RandomString("cloud", 3))
+			testConfigCreateUpdate(t, b, s, tc.config, cloudName)
+			testConfigRead(t, b, s, tc.expected, cloudName)
+
+			// Test that updating one element retains the others
+			tc.expected["user_domain_name"] = "800e371d-ee51-4145-9ac8-5c43e4ceb79b"
+			configSubset := map[string]interface{}{
+				"user_domain_name": "800e371d-ee51-4145-9ac8-5c43e4ceb79b",
+			}
+
+			testConfigCreateUpdate(t, b, s, configSubset, cloudName)
+			testConfigRead(t, b, s, tc.expected, cloudName)
+		})
+	}
+}
+
+func testConfigCreateUpdate(t *testing.T, b logical.Backend, s logical.Storage, expected map[string]interface{}, name string) {
+	t.Helper()
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
+		Storage:   s,
+		Operation: logical.CreateOperation,
+		Path:      pathCloudKey(name),
+		Data:      expected,
+	})
+	require.NoError(t, err)
+}
+
+func testConfigRead(t *testing.T, b logical.Backend, s logical.Storage, expected map[string]interface{}, name string) {
+	t.Helper()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Storage:   s,
+		Operation: logical.ReadOperation,
+		Path:      pathCloudKey(name),
+	})
+	require.NoError(t, err)
+
+	expected["next_rotation"] = resp.Data["next_rotation"]
+	assert.Equal(t, expected, resp.Data)
 }
