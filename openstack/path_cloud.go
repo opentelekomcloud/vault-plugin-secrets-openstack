@@ -21,7 +21,7 @@ Configure the root credentials for an OpenStack cloud using the above parameters
 	pathCloudListHelpDesc = `List existing OpenStack clouds by name.`
 
 	DefaultUsernameTemplate = "vault{{random 8 | lowercase}}"
-	defaultRootPasswordTTL  = 4380 * time.Hour
+	defaultRootPasswordTTL  = 1440 * time.Hour
 )
 
 func storageCloudKey(name string) string {

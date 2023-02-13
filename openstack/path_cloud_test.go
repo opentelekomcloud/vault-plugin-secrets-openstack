@@ -221,7 +221,7 @@ func TestConfig(t *testing.T) {
 				"username":          "test-username-1",
 				"user_domain_name":  "testUserDomainName",
 				"username_template": "user-{{ .RoleName }}-{{ random 4 }}",
-				"root_password_ttl": 15768000,
+				"root_password_ttl": 5184000,
 				"password_policy":   "",
 			},
 		},

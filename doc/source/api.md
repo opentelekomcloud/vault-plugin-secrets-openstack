@@ -22,7 +22,7 @@ will overwrite them.
 
 * `password` `(string: <required>)` - OpenStack password of the root user.
 
-* `root_password_ttl` `(string: <optional>)` - Password rotation period. Default period is six month.
+* `root_password_ttl` `(string: <optional>)` - Password rotation period. Default period is 2 month.
 
 * `username_template` `(string: "vault{{random 8 | lowercase}}")` - Template used for usernames
   of temporary users. For details on templating syntax please refer to

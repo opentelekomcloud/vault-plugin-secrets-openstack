@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"net/http"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	th "github.com/gophercloud/gophercloud/testhelper"
 	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
@@ -25,6 +27,8 @@ const (
 	failVerbPut
 	failVerbList
 	failVerbDelete
+	defaultLeaseTTLHr = 1 * time.Hour
+	maxLeaseTTLHr     = 12 * time.Hour
 )
 
 func testBackend(t *testing.T, fvs ...failVerb) (*backend, logical.Storage) {
@@ -164,4 +168,32 @@ func TestSharedCloud_client(t *testing.T) {
 		_, err = cloud.getClient(context.Background(), s)
 		assert.NoError(t, err)
 	})
+}
+
+func TestPeriodicFuncNilConfig(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	b, _ := testBackend(t)
+
+	config := &logical.BackendConfig{
+		Logger: logging.NewVaultLogger(log.Trace),
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLHr,
+			MaxLeaseTTLVal:     maxLeaseTTLHr,
+		},
+		StorageView: &logical.InmemStorage{},
+	}
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatalf("unable to create backend: %v", err)
+	}
+
+	err = b.periodicFunc(context.Background(), &logical.Request{
+		Storage: config.StorageView,
+	})
+
+	if err != nil {
+		t.Fatalf("periodicFunc error not nil: %v", err)
+	}
 }
