@@ -9,11 +9,6 @@ PROJECT =$(notdir $(WORKDIR))
 export VAULT_PLUGIN_DIR =$(WORKDIR)/bin
 BINARY_PATH =$(VAULT_PLUGIN_DIR)/$(PROJECT)
 
-# unset OS_ variables
-env_vars := $(shell env | grep -oE 'OS_[^=]+' )
-unexport $(env_vars)
-#export OS_CLOUD OS_CLIENT_CONFIG_FILE
-
 module_path := github.com/opentelekomcloud/vault-plugin-secrets-openstack
 ldflags := -s -w \
   -X $(module_path)/vars.ProjectName=vault-plugin-secrets-openstack \
