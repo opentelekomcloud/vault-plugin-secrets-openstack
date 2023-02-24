@@ -9,18 +9,13 @@ PROJECT =$(notdir $(WORKDIR))
 export VAULT_PLUGIN_DIR =$(WORKDIR)/bin
 BINARY_PATH =$(VAULT_PLUGIN_DIR)/$(PROJECT)
 
-# unset OS_ variables
-env_vars ::= $(shell env | grep -oE 'OS_[^=]+' )
-unexport $(env_vars)
-export OS_CLOUD OS_CLIENT_CONFIG_FILE
-
-module_path ::= github.com/opentelekomcloud/vault-plugin-secrets-openstack
-ldflags ::= -s -w \
+module_path := github.com/opentelekomcloud/vault-plugin-secrets-openstack
+ldflags := -s -w \
   -X $(module_path)/vars.ProjectName=vault-plugin-secrets-openstack \
   -X $(module_path)/vars.ProjectDocs=https://$(module_path) \
   -X $(module_path)/vars.BuildVersion=$(shell git rev-parse --abbrev-ref HEAD) \
   -X $(module_path)/vars.BuildRevision=$(shell git rev-parse --short HEAD) \
-  -X $(module_path)/vars.BuildDate=$(shell date --iso-8601)
+  -X $(module_path)/vars.BuildDate=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 build:
 	@mkdir -p $(VAULT_PLUGIN_DIR)
