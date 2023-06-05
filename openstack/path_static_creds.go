@@ -247,7 +247,7 @@ func formStaticAuthResponse(role *roleStaticEntry, authResponse *authStaticRespo
 	default:
 
 		auth = map[string]interface{}{
-			"user_domain_id": authResponse.DomainID,
+			"domain_id": role.UserDomainID,
 		}
 	}
 
@@ -256,6 +256,13 @@ func formStaticAuthResponse(role *roleStaticEntry, authResponse *authStaticRespo
 	} else {
 		auth["username"] = authResponse.Username
 		auth["password"] = authResponse.Password
+	}
+
+	if role.UserDomainID != "" {
+		auth["user_domain_id"] = role.UserDomainID
+	}
+	if role.UserDomainName != "" {
+		auth["user_domain_name"] = role.UserDomainName
 	}
 
 	auth["auth_url"] = authResponse.AuthURL
