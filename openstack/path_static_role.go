@@ -106,6 +106,14 @@ func (b *backend) pathStaticRole() *framework.Path {
 				Type:        framework.TypeNameString,
 				Description: "Specifies a domain name for domain-scoped role.",
 			},
+			"user_domain_id": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Specifies a domain name of a static user.",
+			},
+			"user_domain_name": {
+				Type:        framework.TypeNameString,
+				Description: "Specifies a domain id of a static user.",
+			},
 			"extensions": {
 				Type: framework.TypeKVPairs,
 				Description: "A list of strings representing a key/value pair to be used as extensions to the cloud " +

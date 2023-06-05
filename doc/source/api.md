@@ -631,7 +631,8 @@ $ curl \
       "auth_url": "https://example.com/v3/",
       "token": "gAAAAABiA6Xfybumdwd84qvMDJKYOaauWxSvG9ItslSr5w0Mb...",
       "project_name": "test",
-      "project_domain_id": "Default"
+      "project_domain_id": "Default",
+      "user_domain_id": "test-domain"
     },
     "auth_type": "token"
   }
