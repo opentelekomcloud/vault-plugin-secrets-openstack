@@ -519,7 +519,6 @@ func TestStaticRoleUpdate(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, resp.IsError())
-		fmt.Println(resp)
 		//assert.Regexp(t, regexp.MustCompile(`role .+ not found during update operation`), resp.Data["error"])
 	})
 }
