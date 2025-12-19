@@ -6,6 +6,7 @@ package acceptance
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
@@ -35,6 +36,9 @@ func (p *PluginTest) TestCredsLifecycle() {
 
 	_, aux := openstackClient(t)
 
+	testGroup := os.Getenv("OS_TEST_GROUP")
+	testRole := os.Getenv("OS_TEST_ROLE")
+
 	cases := map[string]testCase{
 		"root_token": {
 			Cloud:     cloud.Name,
@@ -48,7 +52,6 @@ func (p *PluginTest) TestCredsLifecycle() {
 			DomainID:   aux.DomainID,
 			Root:       false,
 			SecretType: "token",
-			UserGroups: []string{"mygroup"},
 			Extensions: map[string]interface{}{
 				"identity_api_version": "3",
 			},
@@ -69,16 +72,31 @@ func (p *PluginTest) TestCredsLifecycle() {
 			UserDomainID: aux.DomainID,
 			Root:         false,
 			SecretType:   "token",
-			UserRoles:    []string{"member"},
 			Extensions: map[string]interface{}{
 				"identity_api_version": "3",
 			},
 		},
 	}
 
+	if testGroup != "" {
+		tc := cases["user_token"]
+		tc.UserGroups = []string{testGroup}
+		cases["user_token"] = tc
+	}
+
+	if testRole != "" {
+		tc := cases["user_domain_id_token"]
+		tc.UserRoles = []string{testRole}
+		cases["user_domain_id_token"] = tc
+	}
+
 	for name, data := range cases {
 		t.Run(name, func(t *testing.T) {
 			data := data
+
+			if !data.Root && os.Getenv("OS_TEST_ADMIN") == "" {
+				t.Skip("Skipping test that requires admin privileges (set OS_TEST_ADMIN=1 to run)")
+			}
 
 			_, err := p.vaultDo(
 				http.MethodPost,
