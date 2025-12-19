@@ -3,18 +3,18 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/logging"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/acceptance/tools"
 	th "github.com/gophercloud/gophercloud/testhelper"
 	thClient "github.com/gophercloud/gophercloud/testhelper/client"
 	"github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
@@ -177,7 +177,7 @@ func TestPeriodicFuncNilConfig(t *testing.T) {
 	b, _ := testBackend(t)
 
 	config := &logical.BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
+		Logger: logging.NewVaultLogger(hclog.Trace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLHr,
 			MaxLeaseTTLVal:     maxLeaseTTLHr,
