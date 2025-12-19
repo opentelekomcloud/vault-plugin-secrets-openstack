@@ -6,6 +6,7 @@ package acceptance
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
@@ -59,6 +60,10 @@ func (p *PluginTest) makeChildCloud(base *openstack.OsCloud) *openstack.OsCloud 
 
 func (p *PluginTest) TestRootRotate() {
 	t := p.T()
+
+	if os.Getenv("OS_TEST_ADMIN") == "" {
+		t.Skip("Skipping test that requires admin privileges (set OS_TEST_ADMIN=1 to run)")
+	}
 
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)

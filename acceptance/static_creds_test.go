@@ -5,14 +5,16 @@ package acceptance
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"testing"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/fixtures"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"testing"
 )
 
 type testStaticCase struct {
@@ -28,6 +30,10 @@ type testStaticCase struct {
 
 func (p *PluginTest) TestStaticCredsLifecycle() {
 	t := p.T()
+
+	if os.Getenv("OS_TEST_ADMIN") == "" {
+		t.Skip("Skipping test that requires admin privileges (set OS_TEST_ADMIN=1 to run)")
+	}
 
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)

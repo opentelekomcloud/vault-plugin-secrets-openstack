@@ -6,6 +6,7 @@ package acceptance
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -41,6 +42,10 @@ func extractStaticRoleData(t *testing.T, resp *http.Response) *staticRoleData {
 
 func (p *PluginTest) TestStaticRoleLifecycle() {
 	t := p.T()
+
+	if os.Getenv("OS_TEST_ADMIN") == "" {
+		t.Skip("Skipping test that requires admin privileges (set OS_TEST_ADMIN=1 to run)")
+	}
 
 	cloud := openstackCloudConfig(t)
 	require.NotEmpty(t, cloud)

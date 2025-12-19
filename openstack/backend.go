@@ -3,12 +3,13 @@ package openstack
 import (
 	"context"
 	"fmt"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
-	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
+	"github.com/hashicorp/go-multierror"
+	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -36,6 +37,7 @@ type sharedCloud struct {
 type backend struct {
 	*framework.Backend
 	clouds               map[string]*sharedCloud
+	cloudsLock           sync.RWMutex
 	checkAutoRotateAfter time.Time
 }
 
@@ -77,6 +79,9 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func (b *backend) getSharedCloud(name string) *sharedCloud {
+	b.cloudsLock.Lock()
+	defer b.cloudsLock.Unlock()
+
 	passwords := &Passwords{PolicyGenerator: b.System()}
 	if c, ok := b.clouds[name]; ok {
 		if c.passwords == nil {
@@ -194,6 +199,9 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, sC
 	if err != nil {
 		return err
 	}
+	if cloudConfig == nil {
+		return nil
+	}
 	if time.Now().After(cloudConfig.RootPasswordExpirationDate) {
 		client, err := sCloud.getClient(ctx, req.Storage)
 		if err != nil {
@@ -226,6 +234,10 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, sC
 		if err := cloudConfig.save(ctx, req.Storage); err != nil {
 			return err
 		}
+
+		// Reset cached client to force re-authentication with new password
+		sCloud.client = nil
+
 		b.Logger().Debug("password rotated", "cloud", cloudConfig.Name)
 	}
 	return nil

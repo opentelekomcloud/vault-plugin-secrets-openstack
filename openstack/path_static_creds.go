@@ -78,11 +78,17 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d
 	if err != nil {
 		return nil, err
 	}
+	if role == nil {
+		return nil, fmt.Errorf("static role %q not found", roleName)
+	}
 
 	sharedCloud := b.getSharedCloud(role.Cloud)
 	cloudConfig, err := sharedCloud.getCloudConfig(ctx, r.Storage)
 	if err != nil {
 		return nil, fmt.Errorf(vars.ErrCloudConf)
+	}
+	if cloudConfig == nil {
+		return nil, fmt.Errorf("cloud %q not found", role.Cloud)
 	}
 
 	client, err := sharedCloud.getClient(ctx, r.Storage)
@@ -158,12 +164,11 @@ func (b *backend) rotateStaticCreds(ctx context.Context, r *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-
-	sharedCloud := b.getSharedCloud(role.Cloud)
-	if err != nil {
-		return nil, err
+	if role == nil {
+		return nil, fmt.Errorf("static role %q not found", roleName)
 	}
 
+	sharedCloud := b.getSharedCloud(role.Cloud)
 	client, err := sharedCloud.getClient(ctx, r.Storage)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusConflict, common.LogHttpError(err).Error())

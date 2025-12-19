@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/openstack/common"
 	"github.com/opentelekomcloud/vault-plugin-secrets-openstack/vars"
 
@@ -67,6 +68,9 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 	if err != nil {
 		return nil, fmt.Errorf(vars.ErrCloudConf)
 	}
+	if cloudConfig == nil {
+		return nil, fmt.Errorf("cloud %q not found", cloudName)
+	}
 
 	newPassword, err := sharedCloud.passwords.Generate(ctx)
 	if err != nil {
@@ -90,6 +94,9 @@ func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Reques
 	if err := cloudConfig.save(ctx, req.Storage); err != nil {
 		return nil, err
 	}
+
+	// Reset cached client to force re-authentication with new password
+	sharedCloud.client = nil
 
 	return &logical.Response{}, nil
 }
