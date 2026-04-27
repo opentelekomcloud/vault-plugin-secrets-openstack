@@ -59,6 +59,7 @@ func (b *backend) pathRotateStaticCreds() *framework.Path {
 				Description: "Specifies name of the static role which credentials will be rotated.",
 			},
 		},
+		ExistenceCheck: b.rotateStaticCredsExistenceCheck,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.rotateStaticCreds,
@@ -70,6 +71,15 @@ func (b *backend) pathRotateStaticCreds() *framework.Path {
 		HelpSynopsis:    rotateStaticHelpSyn,
 		HelpDescription: rotateStaticHelpDesc,
 	}
+}
+
+func (b *backend) rotateStaticCredsExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
+	roleName := d.Get("role").(string)
+	role, err := getStaticRoleByName(ctx, roleName, r)
+	if err != nil {
+		return false, err
+	}
+	return role != nil, nil
 }
 
 func (b *backend) pathStaticCredsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
