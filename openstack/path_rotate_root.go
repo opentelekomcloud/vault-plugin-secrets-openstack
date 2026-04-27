@@ -38,6 +38,7 @@ func (b *backend) pathRotateRoot() *framework.Path {
 				Description: "Specifies name of the cloud which credentials will be rotated.",
 			},
 		},
+		ExistenceCheck: b.rotateRootExistenceCheck,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.rotateRootCredentials,
@@ -49,6 +50,16 @@ func (b *backend) pathRotateRoot() *framework.Path {
 		HelpSynopsis:    rotateHelpSyn,
 		HelpDescription: rotateHelpDesc,
 	}
+}
+
+func (b *backend) rotateRootExistenceCheck(ctx context.Context, r *logical.Request, d *framework.FieldData) (bool, error) {
+	cloudName := d.Get("cloud").(string)
+	cloud := b.getSharedCloud(cloudName)
+	config, err := cloud.getCloudConfig(ctx, r.Storage)
+	if err != nil {
+		return false, err
+	}
+	return config != nil, nil
 }
 
 func (b *backend) rotateRootCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
