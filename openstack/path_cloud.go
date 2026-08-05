@@ -264,3 +264,4 @@ func (b *backend) pathCloudList(ctx context.Context, r *logical.Request, _ *fram
 
 	return logical.ListResponse(clouds), nil
 }
+
